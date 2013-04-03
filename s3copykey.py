@@ -28,7 +28,7 @@ def main():
         if verbose:
             print s3
     except:
-        print "s3 connection", sys.exc_info()
+        print >>sys.stderr, "s3 connection", sys.exc_info()
         return 1;
 
     try:
@@ -36,7 +36,7 @@ def main():
         if verbose:
             print destbucket
     except:
-        print "get bucket", sys.exc_info()
+        print >>sys.stderr, "get bucket", sys.exc_info()
         return 1
 
     try:
@@ -44,7 +44,7 @@ def main():
         if verbose:
             print r
     except:
-        print "copy key", sys.exc_info()
+        print >>sys.stderr, "copy key", sys.exc_info()
         return 1
 
     return 0

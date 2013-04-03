@@ -46,12 +46,12 @@ def main():
         if verbose:
             print s3
     except:
-        print "s3 connection", sys.exc_info()
+        print >>sys.stderr, "s3 connection", sys.exc_info()
         return 1
     try:
         ls_bucket(s3, buckets, prefix, select, long, verbose)
     except:
-        print "list bucket", sys.exc_info()
+        print >>sys.stderr, "list bucket", sys.exc_info()
         return 1
 
     return 0
