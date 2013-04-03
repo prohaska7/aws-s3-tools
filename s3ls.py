@@ -11,30 +11,6 @@ def usage():
     print >>sys.stderr, "list the objects in an s3 bucket with a given prefix"
     return 1
 
-def print_dict(x):
-    print x
-    for k in x.__dict__.keys():
-        print "\t", k, "=", x.__dict__[k]
-
-def print_key(k, select):
-    d = k.__dict__
-    for f in select:
-        if d.has_key(f):
-            print d[f],
-    print
-
-def print_bucket(bucket, prefix, select, long, verbose):
-    if verbose:
-        print_dict(bucket)
-    for k in bucket.list(prefix=prefix):
-        if verbose:
-            print_dict(k)
-            print k.get_acl()
-        elif long:
-            print "%s %12d %s" % (k.last_modified, int(k.size), k.name)
-        else:
-            print_key(k, select)
-
 def main():
     verbose = 0
     long = 0
@@ -65,10 +41,46 @@ def main():
             continue
         buckets.append(arg)
 
-    s3 = boto.s3.connection.S3Connection()
-    if verbose:
-        print s3
+    try:
+        s3 = boto.s3.connection.S3Connection()
+        if verbose:
+            print s3
+    except:
+        print "s3 connection", sys.exc_info()
+        return 1
+    try:
+        ls_bucket(s3, buckets, prefix, select, long, verbose)
+    except:
+        print "list bucket", sys.exc_info()
+        return 1
 
+    return 0
+
+def print_dict(x):
+    print x
+    for k in x.__dict__.keys():
+        print "\t", k, "=", x.__dict__[k]
+
+def print_key(k, select):
+    d = k.__dict__
+    for f in select:
+        if d.has_key(f):
+            print d[f],
+    print
+
+def print_bucket(bucket, prefix, select, long, verbose):
+    if verbose:
+        print_dict(bucket)
+    for k in bucket.list(prefix=prefix):
+        if verbose:
+            print_dict(k)
+            print k.get_acl()
+        elif long:
+            print "%s %12d %s" % (k.last_modified, int(k.size), k.name)
+        else:
+            print_key(k, select)
+
+def ls_bucket(s3, buckets, prefix, select, long, verbose):
     if len(buckets) == 0:
         buckets = s3.get_all_buckets()
         if verbose:
@@ -85,7 +97,7 @@ def main():
             for f in select:
                 if d.has_key(f):
                     print d[f],
-            print
+                print
     else:
         if len(select) == 0:
             select = ['name']
@@ -93,6 +105,5 @@ def main():
             bucket = s3.get_bucket(bucketname)
             print_bucket(bucket, prefix, select, long, verbose)
 
-    return 0
 
 sys.exit(main())
