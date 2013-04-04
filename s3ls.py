@@ -45,13 +45,9 @@ def main():
         s3 = boto.s3.connection.S3Connection()
         if verbose:
             print s3
-    except:
-        print >>sys.stderr, "s3 connection", sys.exc_info()
-        return 1
-    try:
         ls_bucket(s3, buckets, prefix, select, long, verbose)
     except:
-        print >>sys.stderr, "list bucket", sys.exc_info()
+        print >>sys.stderr, sys.exc_info()
         return 1
 
     return 0

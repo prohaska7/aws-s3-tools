@@ -2,6 +2,7 @@
 
 import sys
 import os
+import shutil
 import boto.s3.connection
 import boto.s3.key
 
@@ -30,40 +31,61 @@ def main():
             continue
         myargs.append(arg)
 
-    s3 = boto.s3.connection.S3Connection()
-    if verbose: print s3
-
     if bundle:
         if len(myargs) != 2:
             return usage()
-        bucketname = myargs[0]
-        bucket = s3.get_bucket(bucketname)
-        if verbose: print bucket
-
-        key = myargs[1]
-        get_big_file(bucket, bucketname, key)
+        dname = None
+        try:
+            s3 = boto.s3.connection.S3Connection()
+            if verbose: print s3
+            bucketname = myargs[0]
+            bucket = s3.get_bucket(bucketname)
+            if verbose: print bucket
+            # make a temp dir
+            origdir = os.getcwd()
+            dname = ".s3tmp.%d" % (os.getpid())
+            if verbose: print dname
+            get_big_file(bucket, bucketname, myargs[1], dname)
+        except:
+            print >>sys.stderr, sys.exc_info()
+            # cleanup the tmp dir
+            if dname is not None:
+                print >>sys.stderr, "cleanup", origdir + '/' + dname
+                shutil.rmtree(origdir + '/' + dname)
+            return 1
     else:
         if len(myargs) < 2:
             return usage()
-        
-        bucketname = myargs[0]
-        bucket = s3.get_bucket(bucketname)
-        if verbose: print bucket
 
-        k = boto.s3.key.Key(bucket)
-        k.key = myargs[1]
-        if len(myargs) >= 3:
-            r = k.get_contents_to_filename(myargs[2])
-        else:
-            r = k.get_contents_to_file(sys.stdout)
-        if verbose:
-            print r
+        newfile = None
+        try:
+            s3 = boto.s3.connection.S3Connection()
+            if verbose: print s3        
+
+            bucketname = myargs[0]
+            bucket = s3.get_bucket(bucketname)
+            if verbose: print bucket
+
+            k = boto.s3.key.Key(bucket)
+            k.key = myargs[1]
+            if len(myargs) >= 3:
+                newfile = myargs[2]
+                r = k.get_contents_to_filename(myargs[2])
+            else:
+                r = k.get_contents_to_file(sys.stdout)
+            if verbose: print r
+        except:
+            print >>sys.stderr, sys.exc_info()
+            if newfile is not None:
+                print >>sys.stderr, "unlink", newfile
+                os.unlink(newfile)
+            return 1
     
     return 0
 
 import xml.sax
 
-class bigfileContentHandler(xml.sax.ContentHandler):
+class bigfile_content_handler(xml.sax.ContentHandler):
     def __init__(self):
         self.chunks = []
         self.name = None
@@ -87,10 +109,7 @@ class bigfileContentHandler(xml.sax.ContentHandler):
     def characters(self, ch):
         self.ch = ch
 
-def get_big_file(bucket, bucketname, key):
-    # make a temp dir
-    dname = ".s3tmp.%d" % (os.getpid())
-    if verbose: print dname
+def get_big_file(bucket, bucketname, key, dname):
     os.mkdir(dname)
     os.chdir(dname)
 
@@ -99,7 +118,7 @@ def get_big_file(bucket, bucketname, key):
     get_file(bucket, bucketname, xmlfilename, xmlfilename)
 
     # parse the bundle descriptor
-    bigfilehandler = bigfileContentHandler()
+    bigfilehandler = bigfile_content_handler()
     xml.sax.parse(xmlfilename, bigfilehandler)
     big_filename = bigfilehandler.filename
     expectmd5 = bigfilehandler.md5
