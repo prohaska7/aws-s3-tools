@@ -4,6 +4,7 @@ import sys
 import re
 import os
 import glob
+import shutil
 import boto.s3.connection
 import boto.s3.key
 from stat import *
@@ -44,41 +45,63 @@ def main():
             chunksizestr = match.group(1); continue
         myargs.append(arg)
 
-    if debug:
-        s3 = None
-    else:
-        s3 = boto.s3.connection.S3Connection()
-        if verbose: print s3
-
     if bundle:
         if len(myargs) != 2:
             return usage()
-        bucketname = myargs[0]
-        filename = myargs[1]
-        bucket = None
-        if debug:
+        dname = None
+        try:
+            if debug:
+                s3 = None
+            else:
+                s3 = boto.s3.connection.S3Connection()
+                if verbose: print s3
+            bucketname = myargs[0]
+            filename = myargs[1]
             bucket = None
-        else:
-            bucket = s3.get_bucket(bucketname)
-            if verbose: print bucket
-        
-        put_big_file(bucket, bucketname, filename)
+            if debug:
+                bucket = None
+            else:
+                bucket = s3.get_bucket(bucketname)
+                if verbose: print bucket
+            # make a temp directory for the files to upload
+            dname = ".s3tmp.%d" % (os.getpid())
+            origdir = os.getcwd()
+            if verbose: print dname
+            put_big_file(bucket, bucketname, filename, dname)
+        except:
+            print >>sys.stderr, sys.exc_info()
+            if dname is not None:
+                print >>sys.stderr, "cleanup", origdir + '/' + dname
+                shutil.rmtree(origdir + '/' + dname)
+            return 1
     else:
         if len(myargs) < 2:
             return usage()
-
-        bucketname = myargs[0]
-        keyname = myargs[1]
-        bucket = s3.get_bucket(bucketname)
-        if verbose: print bucket
-
-        k = boto.s3.key.Key(bucket)
-        k.key = keyname
-        if len(myargs) >= 3:
-            r = k.set_contents_from_filename(myargs[2])
-        else:
-            r = k.set_contents_from_file(sys.stdin)
-        if verbose: print r
+        newfile = None
+        try:
+            if debug:
+                s3 = None
+            else:
+                s3 = boto.s3.connection.S3Connection()
+                if verbose: print s3
+            bucketname = myargs[0]
+            keyname = myargs[1]
+            bucket = s3.get_bucket(bucketname)
+            if verbose: print bucket
+            k = boto.s3.key.Key(bucket)
+            k.key = keyname
+            if len(myargs) >= 3:
+                newfile = myargs[2]
+                r = k.set_contents_from_filename(myargs[2])
+            else:
+                r = k.set_contents_from_file(sys.stdin)
+                if verbose: print r
+        except:
+            print >>sys.stderr, sys.exc_info()
+            if newfile is not None:
+                print >>sys.stderr, "cleanup", newfile
+                os.unlink(newfile)
+            return 1
     
     return 0
 
@@ -89,13 +112,10 @@ class Chunk:
         self.name = name; self.size = size; self.offset = offset
 
 
-def put_big_file(bucket, bucketname, big_filename):
+def put_big_file(bucket, bucketname, big_filename, dname):
     statinfo = os.stat(big_filename)
     assert S_ISREG(statinfo[ST_MODE])
 
-    # make a temp directory for the files to upload
-    dname = ".s3tmp.%d" % (os.getpid())
-    if verbose: print dname
     os.mkdir(dname)
 
     # get an md5 sum of the big file
