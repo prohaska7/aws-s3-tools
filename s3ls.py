@@ -93,7 +93,7 @@ def ls_bucket(s3, buckets, prefix, select, long, verbose):
             for f in select:
                 if d.has_key(f):
                     print d[f],
-                print
+            print
     else:
         if len(select) == 0:
             select = ['name']
