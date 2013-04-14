@@ -5,10 +5,10 @@ One can create and remove buckets, put files into buckets, get files from bucket
 the contents of buckets.   There are some simple but incomplete tools to 
 control bucket and key permissions.
 
-S3 objects have limitations on size.  The last time I checked, the limitation was about 2GiB.
-These tools implement use bundled files, described later, to store large files.
+S3 objects have limitations on size.  The last time I checked, the limitation was about 5TiB.
+These tools use bundled files, described later, to store large files.
 
-The tools use the boto python library, which must be downloaded and installed.
+These tools use the boto python library, which must be downloaded and installed.
 
 ## Boto
 The boto library is the python interface to the Amazon Web Services.  
@@ -41,27 +41,33 @@ decomposed into.
     $ s3ls
 
 ### Make an S3 bucket
-    $ s3mkbucket NEWBUCKETNAME
+    $ s3mkbucket NEWBUCKET
 
 ### List the keys in an S3 bucket
-    $ s3ls -l BUCKETNAME
+    $ s3ls -l BUCKET
+
+## List the keys with a given PREFIX
+   $ s3ls --prefix=PREFIX BUCKET
+
+### List the newest keys
+    $ s3ls -l BUCKET | sort | tail
 
 ### Compute the sum of the key sizes in a bucket
     $ s3ls --select=size BUCKET | awk '{s+=$1}END{print s};
     $ sels --select=size --prefix=PREFIX BUCKET | awk '{s+=$1}END{print s}'
 
 ### Put a file into an S3 bucket
-    $ s3put BUCKETNAME KEY FILENAME
+    $ s3put BUCKET KEY FILE
 
 ### Put a bundled  file into an S3 bucket
-    $ s3put --bundle BUCKETNAME FILENAME
+    $ s3put --bundle BUCKET FILE
 
 ### Get an object from an S3 bucket
-    $ s3get BUCKETNAME KEY OUTFILENAME
+    $ s3get BUCKET KEY OUTFILE
 
 ### Get a bundled file from an S3 bucket
-    $ s3get --bundle BUCKETNAME FILENAME
+    $ s3get --bundle BUCKET FILE
 
 ### Delete a key from an S3 bucket
-    $ s3rm BUCKETNAME KEY
+    $ s3rm BUCKET KEY
 
