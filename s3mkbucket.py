@@ -20,15 +20,18 @@ def main():
             continue
         myargs.append(arg)
 
-    s3 = boto.s3.connection.S3Connection()
-    if verbose:
-        print s3
+    r = 0
+    try:
+        s3 = boto.s3.connection.S3Connection()
+        if verbose: print s3
 
-    for bucketname in myargs:
-        b = s3.create_bucket(bucketname)
-        if verbose:
-            print b
+        for bucketname in myargs:
+            b = s3.create_bucket(bucketname)
+            if verbose: print b
+    except:
+        print >>sys.stderr, sys.exc_info()
+        r = 1
 
-    return 0
+    return r
 
 sys.exit(main())
