@@ -61,7 +61,7 @@ def print_key(k, select):
     d = k.__dict__
     for f in select:
         if d.has_key(f):
-            print d[f],
+            print d[f].encode('utf-8'),
     print
 
 def print_bucket(bucket, prefix, select, long, verbose):
