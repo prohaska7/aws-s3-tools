@@ -2,6 +2,7 @@
 
 import sys
 import re
+import string
 import boto.s3.connection
 
 def usage():
@@ -68,13 +69,22 @@ def print_bucket(bucket, prefix, select, long, verbose):
     if verbose:
         print_dict(bucket)
     for k in bucket.list(prefix=prefix):
+        # k.open()
         if verbose:
             print_dict(k)
             print k.get_acl()
+            print 'user-md5=', k.get_metadata('user-md5')
         elif long:
-            print "%s %12d %s" % (k.last_modified, int(k.size), k.name)
+            md5 = string.strip(k.etag, '"')
+            user_md5 = k.get_metadata('user-md5')
+            print md5, user_md5
+            if user_md5 is not None:
+                assert md5 == user_md5
+                md5 = user_md5
+            print "%s %12d %s %s" % (k.last_modified, int(k.size), md5, k.name)
         else:
             print_key(k, select)
+        # k.close()
 
 def ls_bucket(s3, buckets, prefix, select, long, verbose):
     if len(buckets) == 0:
