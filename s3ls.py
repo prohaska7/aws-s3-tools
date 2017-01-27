@@ -3,21 +3,20 @@
 import sys
 import re
 import string
-import boto.s3.connection
+import boto3
 
 def usage():
     print >>sys.stderr, "s3ls [--verbose]"
     print >>sys.stderr, "list the s3 buckets"
-    print >>sys.stderr, "s3ls [--verbose] [--long] [--prefix=prefix] [--select=field,field...] buckets..."
+    print >>sys.stderr, "s3ls [--verbose] [--long] [--prefix=prefix] buckets..."
     print >>sys.stderr, "list the objects in an s3 bucket with a given prefix"
     return 1
 
 def main():
     verbose = 0
-    long = 0
+    dolong = 0
     prefix= ''
 
-    select = []
     buckets = []
     myargs = sys.argv[1:]
     while myargs:
@@ -28,13 +27,7 @@ def main():
             verbose = 1
             continue
         if arg == "-l" or arg == "--long":
-            long = 1
-            continue
-        match = re.match("--select=(.*)", arg)
-        if match:
-            fields = match.group(1);
-            for f in fields.split(','):
-                select.append(f)
+            dolong = 1
             continue
         match = re.match("--prefix=(.*)", arg)
         if match:
@@ -43,10 +36,10 @@ def main():
         buckets.append(arg)
 
     try:
-        s3 = boto.s3.connection.S3Connection()
+        s3 = boto3.resource('s3')
         if verbose:
             print s3
-        ls_bucket(s3, buckets, prefix, select, long, verbose)
+        ls_bucket(s3, buckets, prefix, dolong, verbose)
     except:
         print >>sys.stderr, sys.exc_info()
         return 1
@@ -55,61 +48,46 @@ def main():
 
 def print_dict(x):
     print x
+    print x.__dict__
     for k in x.__dict__.keys():
         print "\t", k, "=", x.__dict__[k]
 
-def print_key(k, select):
-    d = k.__dict__
-    for f in select:
-        if d.has_key(f):
-            print d[f].encode('utf-8'),
-    print
-
-def print_bucket(bucket, prefix, select, long, verbose):
-    if verbose:
-        print_dict(bucket)
-    for k in bucket.list(prefix=prefix):
-        # k.open()
+def print_bucket(bucket, prefix, dolong, verbose):
+    for k in bucket.objects.filter(Prefix=prefix):
         if verbose:
             print_dict(k)
-            print k.get_acl()
-            print 'user-md5=', k.get_metadata('user-md5')
-        elif long:
-            md5 = string.strip(k.etag, '"')
-            user_md5 = k.get_metadata('user-md5')
-            print md5, user_md5
-            if user_md5 is not None:
-                assert md5 == user_md5
-                md5 = user_md5
-            print "%s %12d %s %s" % (k.last_modified, int(k.size), md5, k.name)
+            # print k.get_acl()
+            print k.key
+            print k.size
+            print k.last_modified
+            print k.e_tag
+            print k.content_md5
+            # print k.metadata
+        elif dolong:
+            o = bucket.Object(k.key)
+            md5 = string.strip(o.e_tag, '"')
+            if o.metadata.has_key('user-md5'):
+                user_md5 = o.metadata['user-md5']
+                if md5 != user_md5:
+                    print o.key, md5, user_md5
+                md5 = user_md5 + '*'
+            print "%s %12d %s %s" % (o.last_modified, int(o.content_length), md5, o.key)
         else:
-            print_key(k, select)
-        # k.close()
+            print k.key.encode('utf-8')
 
-def ls_bucket(s3, buckets, prefix, select, long, verbose):
+def ls_bucket(s3, buckets, prefix, dolong, verbose):
     if len(buckets) == 0:
-        buckets = s3.get_all_buckets()
-        if verbose:
-            print_dict(buckets)
-        if len(select) == 0:
-            if long:
-                select = ['creation_date','name']
+        for bucket in s3.buckets.all():
+            if verbose: print_dict(bucket)
+            if dolong:
+                print bucket.creation_date, bucket.name
             else:
-                select = ['name']
-        for bucket in buckets:
-            if verbose:
-                print_dict(bucket)
-            d = bucket.__dict__
-            for f in select:
-                if d.has_key(f):
-                    print d[f],
-            print
+                print bucket.name
     else:
-        if len(select) == 0:
-            select = ['name']
         for bucketname in buckets:
-            bucket = s3.get_bucket(bucketname)
-            print_bucket(bucket, prefix, select, long, verbose)
+            bucket = s3.Bucket(bucketname)
+            if verbose: print_dict(bucket)
+            print_bucket(bucket, prefix, dolong, verbose)
 
 
 sys.exit(main())
