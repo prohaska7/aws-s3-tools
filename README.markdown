@@ -5,20 +5,12 @@ One can create and remove buckets, put files into buckets, get files from bucket
 the contents of buckets.   There are some simple but incomplete tools to 
 control bucket and key permissions.
 
-S3 objects have limitations on size.  The last time I checked, the limitation was about 5TiB.
-These tools use bundled files, described later, to store large files.
-
-These tools use the boto python library, which must be downloaded and installed.
-
 ## Boto
-The boto library is the python interface to the Amazon Web Services.  
-It can be found at http://code.google.com.
+The boto and boto3 libraries are the python interfaces to the Amazon Web Services.  
+They can be found at https://github.com/boto.
 
 ### Installing boto
-    $ download and untar the boto tarball
-    $ cd boto-WHATEVER
-    $ python setup.py build
-    $ sudo python setup.py install
+See the boto and boto3 README's.
 
 ## Installing the AWS tools
 The makefile installs the tools in the user's bin directory.
@@ -33,7 +25,9 @@ The makefile installs the tools in the user's bin directory.
 Since S3 objects have limitations on sizes, these tools allow one to store a file in a sequence of S3 objects
 called bundled files.  The bundled file is described by an XML coded meta-data file, which contains an MD5 sum
 of the file.  It also contains the name, offset, and size of all of the S3 objects that the original file is 
-decomposed into.  
+decomposed into.
+
+Bundled files are not supported since the S3 object size limit is now 5 TB.
 
 ## API
 
@@ -53,8 +47,8 @@ decomposed into.
     $ s3ls -l BUCKET | sort | tail
 
 ### Compute the sum of the key sizes in a bucket
-    $ s3ls --select=size BUCKET | awk '{s+=$1}END{print s};
-    $ sels --select=size --prefix=PREFIX BUCKET | awk '{s+=$1}END{print s}'
+    $ s3ls -l BUCKET | gawk -M '{s+=$3}END{print s};
+    $ sels -l --prefix=PREFIX BUCKET | gawk -M '{s+=$3}END{print s}'
 
 ### Put a file into an S3 bucket
     $ s3put BUCKET KEY FILE

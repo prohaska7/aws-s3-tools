@@ -45,7 +45,6 @@ def main():
                 obj.upload_fileobj(f, ExtraArgs={ 'Metadata': { 'user-md5': local_md5 } })
         else:
             obj.upload_fileobj(sys.stdin)
-        if verbose: print r
     except:
         print >>sys.stderr, sys.exc_info()
         return 1
