@@ -5,6 +5,7 @@ import os
 import hashlib
 import string
 import boto3
+import traceback
 
 def usage():
     print >>sys.stderr, "s3get bucket key [localoutputfile]"
@@ -67,7 +68,9 @@ def main():
         else:
             obj.download_fileobj(sys.stdout)
     except:
-        print >>sys.stderr, sys.exc_info()
+        e = sys.exc_info()
+        print >>sys.stderr, e
+        traceback.print_tb(e[2])
         if newfile is not None:
             print >>sys.stderr, "unlink", newfile
             try:

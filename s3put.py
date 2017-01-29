@@ -4,6 +4,7 @@ import sys
 import os
 import hashlib
 import boto3
+import traceback
 
 def usage():
     print >>sys.stderr, "s3put bucket key [localinputfile]"
@@ -46,7 +47,9 @@ def main():
         else:
             obj.upload_fileobj(sys.stdin)
     except:
-        print >>sys.stderr, sys.exc_info()
+        e = sys.exc_info()
+        print >>sys.stderr, e
+        traceback.print_tb(e[2])
         return 1
     
     return 0
