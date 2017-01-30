@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+import sys
+import os
+import boto3
+import traceback
+import hashlib
+import string
+verbose = 0
+def main():
+    global verbose
+    args = []
+    for a in sys.argv[1:]:
+        if a == '-v' or a == '--verbose':
+            verbose = 1
+            continue
+        args.append(a)
+    
+    assert len(args) == 2
+    bucket_name = args[0]
+    prefix = args[1]
+
+    try:
+        # get all local file names in a directory
+        if verbose: print 'get local'
+        local_infos = get_local_files(prefix)
+
+        # get all key names from s3
+        if verbose: print 'get s3'
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(bucket_name)
+        s3_infos = get_s3_keys(s3, bucket, prefix)
+
+        # diff
+        diff('local', local_infos, 's3', s3_infos)
+    except:
+        e = sys.exc_info()
+        print >>sys.stderr, e
+        traceback.print_tb(e[2])
+        pass
+    return 0
+def diff(astr, a_infos, bstr, b_infos):
+    if verbose: print 'sort', astr
+    a = a_infos.keys()
+    a.sort()
+    if verbose: print 'sort', bstr
+    b = b_infos.keys()
+    b.sort()
+    if verbose: print 'metadiff'
+    ai = bi = 0
+    while ai < len(a) and bi < len(b):
+        if verbose: print 'diff', ai, a[ai], bi, b[bi]
+        if a[ai] == b[bi]:
+            # compare md5 sums
+            k = a[ai]
+            if a_infos[k] != b_infos[k]:
+                print 'md5', k, a_infos[k], b_infos[k]
+            ai += 1
+            bi += 1
+        elif a[ai] < b[bi]:
+            print bstr, 'missing', a[ai]
+            ai += 1
+        else:
+            print astr, 'missing', b[bi]
+            bi += 1
+    while ai < len(a):
+        print bstr, 'missing', a[ai]
+        ai += 1
+    while bi < len(b):
+        print astr, 'missing', b[bi]
+        bi += 1
+def get_s3_keys(s3, bucket, prefix):
+    s3_keys = {}
+    for k in bucket.objects.filter(Prefix=prefix):
+        o = bucket.Object(k.key)
+        md5_digest = string.strip(o.e_tag, '"')
+        if o.metadata.has_key('user-md5'):
+            md5_digest = o.metadata['user-md5']
+	if verbose: print 'get md5', k.key, md5_digest
+        s3_keys[k.key] = md5_digest
+    return s3_keys
+def get_local_files(dname):
+    allfiles = {}
+    for path,dirs,files in os.walk(dname):
+        files.sort()
+        for f in files:
+            if path != '.':
+                fname = path + '/' + f
+            else:
+                fname = f
+            allfiles[fname] = compute_md5(fname)
+	    if verbose: print 'compute md5', fname, allfiles[fname]
+    return allfiles
+def compute_md5(file):
+    md5 = hashlib.md5()
+    with open(file, 'rb') as f:
+        n = 1024*1024
+        b = f.read(n)
+        while b:
+            md5.update(b)
+            b = f.read(n)
+    return md5.hexdigest()
+sys.exit(main())
