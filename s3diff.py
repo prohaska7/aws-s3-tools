@@ -5,13 +5,24 @@ import boto3
 import traceback
 import hashlib
 import string
+import tempfile
+class MD(object):
+    def __init__(self, name, size, digest):
+        self.name = name
+        self.size = size
+        self.digest = digest
+        self.obj = None
 verbose = 0
 def main():
     global verbose
+    metaonly = 0
     args = []
     for a in sys.argv[1:]:
         if a == '-v' or a == '--verbose':
             verbose = 1
+            continue
+        if a == '-m' or a == '--meta':
+            metaonly = 1
             continue
         args.append(a)
     
@@ -22,28 +33,28 @@ def main():
     try:
         # get all local file names in a directory
         if verbose: print 'get local'
-        local_infos = get_local_files(prefix)
+        local_objs = get_local_files(prefix)
 
         # get all key names from s3
         if verbose: print 'get s3'
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(bucket_name)
-        s3_infos = get_s3_keys(s3, bucket, prefix)
+        s3_objs = get_s3_keys(s3, bucket, prefix)
 
         # diff
-        diff('local', local_infos, 's3', s3_infos)
+        diff('local', local_objs, 's3', s3_objs, metaonly)
     except:
         e = sys.exc_info()
         print >>sys.stderr, e
         traceback.print_tb(e[2])
         pass
     return 0
-def diff(astr, a_infos, bstr, b_infos):
+def diff(astr, a_objs, bstr, b_objs, metaonly):
     if verbose: print 'sort', astr
-    a = a_infos.keys()
+    a = a_objs.keys()
     a.sort()
     if verbose: print 'sort', bstr
-    b = b_infos.keys()
+    b = b_objs.keys()
     b.sort()
     if verbose: print 'metadiff'
     ai = bi = 0
@@ -52,8 +63,16 @@ def diff(astr, a_infos, bstr, b_infos):
         if a[ai] == b[bi]:
             # compare md5 sums
             k = a[ai]
-            if a_infos[k] != b_infos[k]:
-                print 'md5', k, a_infos[k], b_infos[k]
+            amd = a_objs[k]
+            bmd = b_objs[k]
+            if amd.size != bmd.size:
+                print 'size', k, amd.size, bmd.size
+            elif amd.digest != bmd.digest:
+                print 'md5', k, a_objs[k].digest, b_objs[k].digest
+            elif not metaonly:
+                if not file_cmp(amd, bmd):
+                    print 'cmp', amd.key, bmd.key
+                pass
             ai += 1
             bi += 1
         elif a[ai] < b[bi]:
@@ -68,6 +87,39 @@ def diff(astr, a_infos, bstr, b_infos):
     while bi < len(b):
         print astr, 'missing', b[bi]
         bi += 1
+def file_cmp(amd, bmd):
+    afile = amd.name
+    bfile = bmd.name
+    if amd.obj:
+        af, afile = tempfile.mkstemp()
+        os.close(af)
+        if verbose: print 'download', amd.name, afile
+        amd.obj.download_file(afile)
+    if bmd.obj:
+        bf, bfile = tempfile.mkstemp()
+        os.close(bf)
+        if verbose: print 'download', bmd.name, bfile
+        bmd.obj.download_file(bfile)
+    r = real_file_cmp(afile, bfile)
+    if amd.obj:
+        os.unlink(afile)
+    if bmd.obj:
+        os.unlink(bfile)
+    return r
+def real_file_cmp(afile, bfile):
+    if verbose: print 'real_file_cmp', afile, bfile
+    r = 1
+    with open(afile, 'rb') as af, open(bfile, 'rb') as bf:
+        n = 1024*1024
+        while 1:
+            ab = af.read(n)
+            bb = bf.read(n)
+            if ab != bb:
+                r = 0
+                break
+            if not ab:
+                break
+    return r
 def get_s3_keys(s3, bucket, prefix):
     s3_keys = {}
     for k in bucket.objects.filter(Prefix=prefix):
@@ -75,8 +127,10 @@ def get_s3_keys(s3, bucket, prefix):
         md5_digest = string.strip(o.e_tag, '"')
         if o.metadata.has_key('user-md5'):
             md5_digest = o.metadata['user-md5']
-	if verbose: print 'get md5', k.key, md5_digest
-        s3_keys[k.key] = md5_digest
+        md = MD(k.key, o.content_length, md5_digest)
+        s3_keys[k.key] = md
+        md.obj = o
+        if verbose: print 'get md5', k.key, md
     return s3_keys
 def get_local_files(dname):
     allfiles = {}
@@ -87,7 +141,7 @@ def get_local_files(dname):
                 fname = path + '/' + f
             else:
                 fname = f
-            allfiles[fname] = compute_md5(fname)
+            allfiles[fname] = MD(fname, os.stat(fname).st_size, compute_md5(fname))
 	    if verbose: print 'compute md5', fname, allfiles[fname]
     return allfiles
 def compute_md5(file):
