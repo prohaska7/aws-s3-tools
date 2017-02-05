@@ -130,7 +130,7 @@ def get_s3_keys(s3, bucket, prefix):
         md = MD(k.key, o.content_length, md5_digest)
         s3_keys[k.key] = md
         md.obj = o
-        if verbose: print 'get md5', k.key, md
+        if verbose: print 'get md5', k.key, md.__dict__
     return s3_keys
 def get_local_files(dname):
     allfiles = {}
@@ -142,7 +142,7 @@ def get_local_files(dname):
             else:
                 fname = f
             allfiles[fname] = MD(fname, os.stat(fname).st_size, compute_md5(fname))
-	    if verbose: print 'compute md5', fname, allfiles[fname]
+	    if verbose: print 'compute md5', fname, allfiles[fname].__dict__
     return allfiles
 def compute_md5(file):
     md5 = hashlib.md5()
