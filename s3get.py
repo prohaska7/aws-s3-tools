@@ -14,7 +14,7 @@ def usage():
 
 def main():
     verbose = 0
-
+    ignore_md5 = 0
     myargs = []
     for arg in sys.argv[1:]:
         if arg == "-h" or arg == "-?" or arg == "--help":
@@ -22,6 +22,8 @@ def main():
         if arg == "-v" or arg == "--verbose":
             verbose = 1
             continue
+        if arg == '--ignore-md5':
+            ignore_md5 = 1
         myargs.append(arg)
 
     if len(myargs) < 2:
@@ -58,13 +60,15 @@ def main():
             if verbose: print local_md5, md5
             if local_md5 != md5:
                 if not obj.metadata.has_key('user-md5'):
-                    raise ValueError('md5')
+                    if not ignore_md5:
+                        raise ValueError('md5')
 
             if obj.metadata.has_key('user-md5'):
                 user_md5 = obj.metadata['user-md5']
                 if verbose: print local_md5, user_md5
                 if local_md5 != user_md5:
-                    raise ValueError('user md5')
+                    if not ignore_md5:
+                        raise ValueError('user md5')
         else:
             obj.download_fileobj(sys.stdout)
     except:
