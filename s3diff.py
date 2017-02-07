@@ -45,7 +45,7 @@ def main():
         diff('local', local_objs, 's3', s3_objs, metaonly)
     except:
         e = sys.exc_info()
-        print >>sys.stderr, e
+        print >>sys.stderr, 'main', e
         traceback.print_tb(e[2])
         pass
     return 0
@@ -56,12 +56,11 @@ def diff(astr, a_objs, bstr, b_objs, metaonly):
     if verbose: print 'sort', bstr
     b = b_objs.keys()
     b.sort()
-    if verbose: print 'metadiff'
+    if verbose: print 'diff'
     ai = bi = 0
     while ai < len(a) and bi < len(b):
         if verbose: print 'diff', ai, a[ai], bi, b[bi]
         if a[ai] == b[bi]:
-            # compare md5 sums
             k = a[ai]
             amd = a_objs[k]
             bmd = b_objs[k]
@@ -72,7 +71,6 @@ def diff(astr, a_objs, bstr, b_objs, metaonly):
             elif not metaonly:
                 if not file_cmp(amd, bmd):
                     print 'cmp', amd.key, bmd.key
-                pass
             ai += 1
             bi += 1
         elif a[ai] < b[bi]:
@@ -90,21 +88,35 @@ def diff(astr, a_objs, bstr, b_objs, metaonly):
 def file_cmp(amd, bmd):
     afile = amd.name
     bfile = bmd.name
-    if amd.obj:
-        af, afile = tempfile.mkstemp()
-        os.close(af)
-        if verbose: print 'download', amd.name, afile
-        amd.obj.download_file(afile)
-    if bmd.obj:
-        bf, bfile = tempfile.mkstemp()
-        os.close(bf)
-        if verbose: print 'download', bmd.name, bfile
+    try:
+        if amd.obj:
+            af, afile = tempfile.mkstemp()
+            os.close(af)
+            if verbose: print 'download', amd.name, afile
+            amd.obj.download_file(afile)
+        if bmd.obj:
+            bf, bfile = tempfile.mkstemp()
+            os.close(bf)
+            if verbose: print 'download', bmd.name, bfile
         bmd.obj.download_file(bfile)
-    r = real_file_cmp(afile, bfile)
-    if amd.obj:
-        os.unlink(afile)
-    if bmd.obj:
-        os.unlink(bfile)
+        r = real_file_cmp(afile, bfile)
+        if amd.obj:
+            os.unlink(afile)
+        if bmd.obj:
+            os.unlink(bfile)
+    except:
+        if verbose: print 'file cmp except', sys.exc_info()
+        try:
+            if amd.obj:
+                os.unlink(afile)
+        except:
+            pass
+        try:
+            if bmd.obj:
+                os.unlink(bfile)
+        except:
+            pass
+        raise
     return r
 def real_file_cmp(afile, bfile):
     if verbose: print 'real_file_cmp', afile, bfile
@@ -130,7 +142,7 @@ def get_s3_keys(s3, bucket, prefix):
         md = MD(k.key, o.content_length, md5_digest)
         s3_keys[k.key] = md
         md.obj = o
-        if verbose: print 'get md5', k.key, md
+        if verbose: print 'get md5', k.key, md.__dict__
     return s3_keys
 def get_local_files(dname):
     allfiles = {}
@@ -142,7 +154,7 @@ def get_local_files(dname):
             else:
                 fname = f
             allfiles[fname] = MD(fname, os.stat(fname).st_size, compute_md5(fname))
-	    if verbose: print 'compute md5', fname, allfiles[fname]
+	    if verbose: print 'compute md5', fname, allfiles[fname].__dict__
     return allfiles
 def compute_md5(file):
     md5 = hashlib.md5()
