@@ -16,6 +16,7 @@ verbose = 0
 def main():
     global verbose
     metaonly = 0
+    ignore_md5 = 0
     args = []
     for a in sys.argv[1:]:
         if a == '-v' or a == '--verbose':
@@ -23,6 +24,9 @@ def main():
             continue
         if a == '-m' or a == '--meta':
             metaonly = 1
+            continue
+        if a == '--ignore-md5':
+            ignore_md5 = 1
             continue
         args.append(a)
     
@@ -33,7 +37,7 @@ def main():
     try:
         # get all local file names in a directory
         if verbose: print 'get local'
-        local_objs = get_local_files(prefix)
+        local_objs = get_local_files(prefix, ignore_md5)
 
         # get all key names from s3
         if verbose: print 'get s3'
@@ -42,14 +46,14 @@ def main():
         s3_objs = get_s3_keys(s3, bucket, prefix)
 
         # diff
-        diff('local', local_objs, 's3', s3_objs, metaonly)
+        diff('local', local_objs, 's3', s3_objs, metaonly, ignore_md5)
     except:
         e = sys.exc_info()
         print >>sys.stderr, 'main', e
         traceback.print_tb(e[2])
         pass
     return 0
-def diff(astr, a_objs, bstr, b_objs, metaonly):
+def diff(astr, a_objs, bstr, b_objs, metaonly, ignore_md5):
     if verbose: print 'sort', astr
     a = a_objs.keys()
     a.sort()
@@ -66,7 +70,7 @@ def diff(astr, a_objs, bstr, b_objs, metaonly):
             bmd = b_objs[k]
             if amd.size != bmd.size:
                 print 'size', k, amd.size, bmd.size
-            elif amd.digest != bmd.digest:
+            elif not ignore_md5 and amd.digest != bmd.digest:
                 print 'md5', k, a_objs[k].digest, b_objs[k].digest
             elif not metaonly:
                 if not file_cmp(amd, bmd):
@@ -144,7 +148,7 @@ def get_s3_keys(s3, bucket, prefix):
         md.obj = o
         if verbose: print 'get md5', k.key, md.__dict__
     return s3_keys
-def get_local_files(dname):
+def get_local_files(dname, ignore_md5):
     allfiles = {}
     for path,dirs,files in os.walk(dname):
         files.sort()
@@ -153,7 +157,10 @@ def get_local_files(dname):
                 fname = path + '/' + f
             else:
                 fname = f
-            allfiles[fname] = MD(fname, os.stat(fname).st_size, compute_md5(fname))
+            digest = 0
+            if not ignore_md5:
+                digest = compute_md5(fname)
+            allfiles[fname] = MD(fname, os.stat(fname).st_size, digest)
 	    if verbose: print 'compute md5', fname, allfiles[fname].__dict__
     return allfiles
 def compute_md5(file):
