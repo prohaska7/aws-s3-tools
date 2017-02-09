@@ -2,7 +2,8 @@
 
 import sys
 import re
-import boto.s3.connection
+import boto3
+import traceback
 
 def usage():
     print >>sys.stderr, "s3rm [--verbose] [-r] bucket [key...]"
@@ -30,33 +31,39 @@ def main():
         return usage()
 
     bucketname = myargs.pop(0)
-    if verbose:
-        print bucketname
+    if verbose: print bucketname
 
-    s3 = boto.s3.connection.S3Connection()
-    if verbose:
-        print s3
-    b = s3.get_bucket(bucketname)
-    if verbose:
-        print b
+    s3 = boto3.resource('s3')
+    if verbose: print s3
+    b = s3.Bucket(bucketname)
+    if verbose: print b
 
+    exitr = 0
     if len(myargs) == 0:
         if rflag:
-            keys = b.get_all_keys()
-            for k in keys:
-                b.delete_key(k.name)
-                
-        r = b.delete()
-        if verbose:
-            print r
+            for key in b.objects.all():
+                resp = key.delete()
+                if verbose: print resp
+        try:
+            resp = b.delete()
+            if verbose: print resp
+        except:
+            e = sys.exc_info()
+            print >>sys.stderr, e
+            traceback.print_tb(e[2])
+            exitr = 1
     else:
         for keyname in myargs:
-            if verbose:
-                print "remove key", keyname
-            r = b.delete_key(keyname)
-            if verbose:
-                print r
+            if verbose: print "remove key", keyname
+            deleted = 0
+            for obj in b.objects.filter(Prefix=keyname):
+                resp = obj.delete()
+                if verbose: print resp
+                deleted += 1
+            if deleted == 0:
+                print >>sys.stderr, 'could not rm', keyname
+                exitr = 1
 
-    return 0
+    return exitr
 
 sys.exit(main())
