@@ -35,17 +35,17 @@ def main():
 
     s3 = boto3.resource('s3')
     if verbose: print s3
-    b = s3.Bucket(bucketname)
-    if verbose: print b
+    bucket = s3.Bucket(bucketname)
+    if verbose: print bucket
 
     exitr = 0
     if len(myargs) == 0:
         if rflag:
-            for key in b.objects.all():
-                resp = key.delete()
+            for obj in bucket.objects.all():
+                resp = obj.delete()
                 if verbose: print resp
         try:
-            resp = b.delete()
+            resp = bucket.delete()
             if verbose: print resp
         except:
             e = sys.exc_info()
@@ -56,7 +56,7 @@ def main():
         for keyname in myargs:
             if verbose: print "remove key", keyname
             deleted = 0
-            for obj in b.objects.filter(Prefix=keyname):
+            for obj in bucket.objects.filter(Prefix=keyname):
                 resp = obj.delete()
                 if verbose: print resp
                 deleted += 1
