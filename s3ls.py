@@ -4,6 +4,7 @@ import sys
 import re
 import string
 import boto3
+import traceback
 
 def usage():
     print >>sys.stderr, "s3ls [--verbose]"
@@ -41,7 +42,9 @@ def main():
             print s3
         ls_bucket(s3, buckets, prefix, dolong, verbose)
     except:
-        print >>sys.stderr, sys.exc_info()
+        e = sys.exc_info()
+        print >>sys.stderr, e
+        traceback.print_tb(e[2])
         return 1
 
     return 0
@@ -61,7 +64,7 @@ def print_bucket(bucket, prefix, dolong, verbose):
             print k.size
             print k.last_modified
             print k.e_tag
-            print k.content_md5
+            # print k.content_md5
             # print k.metadata
         elif dolong:
             o = bucket.Object(k.key)
