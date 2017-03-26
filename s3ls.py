@@ -74,7 +74,7 @@ def print_bucket(bucket, prefix, dolong, verbose):
                 if md5 != user_md5:
                     print o.key, md5, user_md5
                 md5 = user_md5 + '*'
-            print "%s %12d %s %s" % (o.last_modified, int(o.content_length), md5, o.key)
+            print "%s %12d %s %s" % (o.last_modified, int(o.content_length), md5, o.key.encode('utf-8'))
         else:
             print k.key.encode('utf-8')
 
