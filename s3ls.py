@@ -53,14 +53,18 @@ def print_dict(x):
     print x
     print x.__dict__
     for k in x.__dict__.keys():
-        print "\t", k, "=", x.__dict__[k]
+        v = x.__dict__[k]
+        if isinstance(v,unicode):
+            print "\t", k, "=", v.encode('utf-8')
+        else:
+            print "\t", k, "=", v
 
 def print_bucket(bucket, prefix, dolong, verbose):
     for k in bucket.objects.filter(Prefix=prefix):
         if verbose:
             print_dict(k)
             # print k.get_acl()
-            print k.key
+            print k.key.encode('utf-8')
             print k.size
             print k.last_modified
             print k.e_tag
@@ -72,7 +76,7 @@ def print_bucket(bucket, prefix, dolong, verbose):
             if o.metadata.has_key('user-md5'):
                 user_md5 = o.metadata['user-md5']
                 if md5 != user_md5:
-                    print o.key, md5, user_md5
+                    print o.key.encode('utf-8'), md5, user_md5
                 md5 = user_md5 + '*'
             print "%s %12d %s %s" % (o.last_modified, int(o.content_length), md5, o.key.encode('utf-8'))
         else:
