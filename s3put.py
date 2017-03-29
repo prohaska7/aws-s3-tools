@@ -5,6 +5,7 @@ import os
 import hashlib
 import boto3
 import traceback
+import logging
 
 def usage():
     print >>sys.stderr, "s3put bucket key [localinputfile]"
@@ -23,6 +24,9 @@ def main():
             verbose = 1; continue
         myargs.append(arg)
 
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
     if len(myargs) < 2:
         return usage()
     try:
@@ -31,6 +35,12 @@ def main():
 
         bucketname = myargs[0]
         keyname = myargs[1]
+
+        # convert keyname to unicode
+        try:
+            keyname = keyname.decode('utf-8')
+        except:
+            pass
 
         obj = s3.Object(bucketname, keyname)
         if verbose: print obj
@@ -43,7 +53,10 @@ def main():
 
             # set key value from filename and use precomputed md5
             with open(localfile, 'rb') as f:
-                obj.upload_fileobj(f, ExtraArgs={ 'Metadata': { 'user-md5': local_md5 } })
+                config = None
+                if verbose:
+                    config = boto3.s3.transfer.TransferConfig(use_threads=False)
+                obj.upload_fileobj(f, ExtraArgs={ 'Metadata': { 'user-md5': local_md5 } }, Config=config)
         else:
             obj.upload_fileobj(sys.stdin)
     except:

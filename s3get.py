@@ -6,6 +6,7 @@ import hashlib
 import string
 import boto3
 import traceback
+import logging
 
 def usage():
     print >>sys.stderr, "s3get bucket key [localoutputfile]"
@@ -29,6 +30,9 @@ def main():
     if len(myargs) < 2:
         return usage()
 
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
     newfile = None
     try:
         s3 = boto3.resource('s3')
@@ -36,6 +40,12 @@ def main():
 
         bucketname = myargs[0]
         keyname = myargs[1]
+
+        # convert keyname to unicode
+        try:
+            keyname = keyname.decode('utf-8')
+        except:
+            pass
 
         obj = s3.Object(bucketname, keyname)
         if verbose: print obj
