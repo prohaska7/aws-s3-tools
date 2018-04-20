@@ -102,7 +102,7 @@ def file_cmp(amd, bmd):
             bf, bfile = tempfile.mkstemp()
             os.close(bf)
             if verbose: print 'download', bmd.name, bfile
-        bmd.obj.download_file(bfile)
+            bmd.obj.download_file(bfile)
         r = real_file_cmp(afile, bfile)
         if amd.obj:
             os.unlink(afile)
