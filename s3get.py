@@ -71,14 +71,16 @@ def main():
             if local_md5 != md5:
                 if not obj.metadata.has_key('user-md5'):
                     if not ignore_md5:
-                        raise ValueError('md5')
+                        e = 'user-md5 metadata missing local_md5=%s etag=%s' % (local_md5, md5)
+                        raise ValueError(e)
 
             if obj.metadata.has_key('user-md5'):
                 user_md5 = obj.metadata['user-md5']
                 if verbose: print local_md5, user_md5
                 if local_md5 != user_md5:
                     if not ignore_md5:
-                        raise ValueError('user md5')
+                        e = 'user md5 different local_md5=%s user_md5=%s' % (local_md5, user_md5)
+                        raise ValueError(e)
         else:
             obj.download_fileobj(sys.stdout)
     except:
