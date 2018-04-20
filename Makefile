@@ -1,5 +1,5 @@
-SRC = $(wildcard s3*.py)
-UTILS = $(patsubst %.py,%,$(SRC))
+SRC = $(wildcard s3*.py s3*.sh)
+UTILS = $(patsubst %.sh,%,$(patsubst %.py,%,$(SRC)))
 
 all: $(UTILS)
 
