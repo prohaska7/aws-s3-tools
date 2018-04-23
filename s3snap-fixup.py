@@ -29,7 +29,7 @@ def usage():
     print '[--help] [--verbose] [--prefix=the_prefix] [--size=the_size_limit] src_bucket dest_bucket'
 
 def main():
-    prefix = None
+    prefix = ''
     size_limit = None
     buckets = []
     for arg in sys.argv[1:]:
@@ -94,6 +94,7 @@ def fixup_object(s3client, k, src_bucketname, src_bucket, dest_bucketname, dest_
             o.download_file(destfile)
 
             if not file_cmp(srcfile, destfile):
+                print k.key, 'file cmp failed'
                 return
 
             # compute md5 checksums

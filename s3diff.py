@@ -70,9 +70,9 @@ def diff(astr, a_objs, bstr, b_objs, metaonly, ignore_md5):
             bmd = b_objs[k]
             if amd.size != bmd.size:
                 print 'size', k, amd.size, bmd.size
-            elif not ignore_md5 and amd.digest != bmd.digest:
+            if not ignore_md5 and amd.digest != bmd.digest:
                 print 'md5', k, a_objs[k].digest, b_objs[k].digest
-            elif not metaonly:
+            if not metaonly:
                 if not file_cmp(amd, bmd):
                     print 'cmp', amd.key, bmd.key
             ai += 1
