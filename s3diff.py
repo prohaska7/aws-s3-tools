@@ -7,16 +7,16 @@ import hashlib
 import string
 import tempfile
 class MD(object):
-    def __init__(self, name, size, digest):
+    def __init__(self, name, size, tag, md5, obj):
         self.name = name
         self.size = size
-        self.digest = digest
-        self.obj = None
+        self.tag = tag
+        self.md5 = md5
+        self.obj = obj
 verbose = 0
 def main():
     global verbose
     metaonly = 0
-    ignore_md5 = 0
     args = []
     for a in sys.argv[1:]:
         if a == '-v' or a == '--verbose':
@@ -24,9 +24,6 @@ def main():
             continue
         if a == '-m' or a == '--meta':
             metaonly = 1
-            continue
-        if a == '--ignore-md5':
-            ignore_md5 = 1
             continue
         args.append(a)
     
@@ -37,7 +34,7 @@ def main():
     try:
         # get all local file names in a directory
         if verbose: print 'get local'
-        local_objs = get_local_files(prefix, ignore_md5)
+        local_objs = get_local_files(prefix)
 
         # get all key names from s3
         if verbose: print 'get s3'
@@ -46,14 +43,14 @@ def main():
         s3_objs = get_s3_keys(s3, bucket, prefix)
 
         # diff
-        diff('local', local_objs, 's3', s3_objs, metaonly, ignore_md5)
+        diff('local', local_objs, 's3', s3_objs, metaonly)
     except:
         e = sys.exc_info()
         print >>sys.stderr, 'main', e
         traceback.print_tb(e[2])
         pass
     return 0
-def diff(astr, a_objs, bstr, b_objs, metaonly, ignore_md5):
+def diff(astr, a_objs, bstr, b_objs, metaonly):
     if verbose: print 'sort', astr
     a = a_objs.keys()
     a.sort()
@@ -70,8 +67,13 @@ def diff(astr, a_objs, bstr, b_objs, metaonly, ignore_md5):
             bmd = b_objs[k]
             if amd.size != bmd.size:
                 print 'size', k, amd.size, bmd.size
-            if not ignore_md5 and amd.digest != bmd.digest:
-                print 'md5', k, a_objs[k].digest, b_objs[k].digest
+            if bmd.md5 is None:
+                print 'missing user-md5', k
+                if amd.md5 != bmd.tag:
+                    print 'tag', k, amd.md5, bmd.tag
+            else:
+                if amd.md5 != bmd.md5:
+                    print 'md5', k, a_objs[k].md5, b_objs[k].md5
             if not metaonly:
                 if not file_cmp(amd, bmd):
                     print 'cmp', amd.key, bmd.key
@@ -140,15 +142,14 @@ def get_s3_keys(s3, bucket, prefix):
     s3_keys = {}
     for k in bucket.objects.filter(Prefix=prefix):
         o = bucket.Object(k.key)
-        md5_digest = string.strip(o.e_tag, '"')
+        e_tag = string.strip(o.e_tag, '"')
+        md5_digest = None
         if o.metadata.has_key('user-md5'):
             md5_digest = o.metadata['user-md5']
-        md = MD(k.key, o.content_length, md5_digest)
-        s3_keys[k.key] = md
-        md.obj = o
-        if verbose: print 'get md5', k.key, md.__dict__
+        s3_keys[k.key] = MD(k.key, o.content_length, e_tag, md5_digest, o)
+        if verbose: print 'get md5', k.key, s3_keys[k.key].__dict__
     return s3_keys
-def get_local_files(dname, ignore_md5):
+def get_local_files(dname):
     allfiles = {}
     for path,dirs,files in os.walk(dname):
         files.sort()
@@ -157,10 +158,8 @@ def get_local_files(dname, ignore_md5):
                 fname = path + '/' + f
             else:
                 fname = f
-            digest = 0
-            if not ignore_md5:
-                digest = compute_md5(fname)
-            allfiles[fname] = MD(fname, os.stat(fname).st_size, digest)
+            md5 = compute_md5(fname)
+            allfiles[fname] = MD(fname, os.stat(fname).st_size, None, md5, None)
 	    if verbose: print 'compute md5', fname, allfiles[fname].__dict__
     return allfiles
 def compute_md5(file):
@@ -172,4 +171,5 @@ def compute_md5(file):
             md5.update(b)
             b = f.read(n)
     return md5.hexdigest()
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())
