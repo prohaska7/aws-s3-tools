@@ -9,7 +9,7 @@ bucket=$1
 find -L $2 -type f | \
 while read f; do
     if [ -f "$f" ] ; then
-        if [ $verbose -ne 0 ] ; then echop s3put $bucket "$f" "$f"
+        if [ $verbose -ne 0 ] ; then echo s3put $bucket "$f" "$f"; fi
 	s3put $bucket "$f" "$f"
     fi
 done
