@@ -13,6 +13,11 @@ class MD(object):
         self.tag = tag
         self.md5 = md5
         self.obj = obj
+    def __str__(self):
+        if self.obj is None:
+            return self.name
+        else:
+            return 's3://' + self.obj.bucket_name + '/' + self.obj.key
 verbose = 0
 def main():
     global verbose
@@ -50,46 +55,48 @@ def main():
         traceback.print_tb(e[2])
         pass
     return 0
-def diff(astr, a_objs, bstr, b_objs, metaonly):
-    if verbose: print 'sort', astr
+def diff(a_label, a_objs, b_label, b_objs, metaonly):
+    if verbose: print 'sort', a_label
     a = a_objs.keys()
     a.sort()
-    if verbose: print 'sort', bstr
+    if verbose: print 'sort', b_label
     b = b_objs.keys()
     b.sort()
     if verbose: print 'diff'
     ai = bi = 0
     while ai < len(a) and bi < len(b):
         if verbose: print 'diff', ai, a[ai], bi, b[bi]
-        if a[ai] == b[bi]:
-            k = a[ai]
-            amd = a_objs[k]
-            bmd = b_objs[k]
+        astr = a[ai]
+        bstr = b[bi]
+        if verbose: print type(astr), type(bstr)
+        if astr == bstr:
+            amd = a_objs[astr]
+            bmd = b_objs[bstr]
             if amd.size != bmd.size:
-                print 'size', k, amd.size, bmd.size
+                print 'size', astr, amd.size, bmd.size
             if bmd.md5 is None:
-                print 'missing user-md5', k
+                print 'missing user-md5', astr
                 if amd.md5 != bmd.tag:
-                    print 'tag', k, amd.md5, bmd.tag
+                    print 'tag', astr, amd.md5, bmd.tag
             else:
                 if amd.md5 != bmd.md5:
-                    print 'md5', k, a_objs[k].md5, b_objs[k].md5
+                    print 'md5', astr, amd.md5, bmd.md5
             if not metaonly:
                 if not file_cmp(amd, bmd):
-                    print 'cmp', amd.key, bmd.key
+                    print 'cmp', amd, bmd
             ai += 1
             bi += 1
-        elif a[ai] < b[bi]:
-            print bstr, 'missing', a[ai]
+        elif astr < bstr:
+            print b_label, 'missing', astr
             ai += 1
         else:
-            print astr, 'missing', b[bi]
+            print a_label, 'missing', bstr
             bi += 1
     while ai < len(a):
-        print bstr, 'missing', a[ai]
+        print b_label, 'missing', astr
         ai += 1
     while bi < len(b):
-        print astr, 'missing', b[bi]
+        print a_label, 'missing', bstr
         bi += 1
 def file_cmp(amd, bmd):
     afile = amd.name
@@ -158,6 +165,7 @@ def get_local_files(dname):
                 fname = path + '/' + f
             else:
                 fname = f
+            fname = fname.decode('utf-8')
             md5 = compute_md5(fname)
             allfiles[fname] = MD(fname, os.stat(fname).st_size, None, md5, None)
 	    if verbose: print 'compute md5', fname, allfiles[fname].__dict__

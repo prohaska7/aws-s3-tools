@@ -67,4 +67,5 @@ def ls_bucket(bucket, prefix, dolong):
         else:
             print k.key.encode('utf-8')
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())
