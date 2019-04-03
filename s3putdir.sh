@@ -6,7 +6,7 @@ while [ $# -gt 0 ] ; do
 done
 if [ $# != 2 ] ; then exit 1; fi
 bucket=$1
-find -L $2 -type f | \
+find -L "$2" -type f | \
 while read f; do
     if [ -f "$f" ] ; then
         if [ $verbose -ne 0 ] ; then echo s3put $bucket "$f" "$f"; fi
