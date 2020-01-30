@@ -93,10 +93,10 @@ def diff(a_label, a_objs, b_label, b_objs, metaonly):
             print a_label, 'missing', bstr
             bi += 1
     while ai < len(a):
-        print b_label, 'missing', astr
+        print b_label, 'missing', a[ai]
         ai += 1
     while bi < len(b):
-        print a_label, 'missing', bstr
+        print a_label, 'missing', b[bi]
         bi += 1
 def file_cmp(amd, bmd):
     afile = amd.name
