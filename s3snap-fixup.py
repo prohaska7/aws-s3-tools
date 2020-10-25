@@ -92,10 +92,12 @@ def fixup_object(s3client, k, src_bucketname, src_bucket, dest_bucketname, dest_
         # diff src and dest objects
         srcf, srcfile = tempfile.mkstemp()
         os.close(srcf)
+        print('download src', src_bucketname, k.key, srcfile)
         srco.download_file(srcfile)
 
         destf, destfile = tempfile.mkstemp()
         os.close(destf)
+        print('download dest', dest_bucketname, k.key, destfile)
         o.download_file(destfile)
 
         if not file_cmp(srcfile, destfile):
@@ -106,7 +108,7 @@ def fixup_object(s3client, k, src_bucketname, src_bucket, dest_bucketname, dest_
         src_md5 = compute_md5(srcfile)
         dest_md5 = compute_md5(destfile)
         if src_md5 != dest_md5:
-            print(k.key, srcfile, 'src md5=', src_md5, destfile, 'dest md5=', dest_md5)
+            print('diff md5', k.key, srcfile, 'src md5=', src_md5, destfile, 'dest md5=', dest_md5)
             return
 
         os.unlink(srcfile)
@@ -116,8 +118,8 @@ def fixup_object(s3client, k, src_bucketname, src_bucket, dest_bucketname, dest_
         src_tag = srco.e_tag.strip('"')
         dest_tag = o.e_tag.strip('"')
         if src_md5 != src_tag:
-            print(k.key, 'src etag=', src_tag, 'dest etag=', dest_tag)
-            return
+            print('note diff etag', k.key, 'src etag=', src_tag, 'src md5=', src_md5)
+            print('note diff etag', k.key, 'dest etag=', src_tag, 'dest md5=', dest_md5)
             
         # update dest object metadata with checksum
         print('fixing', k.key, 'user-md5=', dest_md5)
