@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
 import re
@@ -6,9 +6,9 @@ import boto3
 import traceback
 
 def usage():
-    print >>sys.stderr, "s3rm [--verbose] [-r] bucket [key...]"
-    print >>sys.stderr, "delete a bucket or"
-    print >>sys.stderr, "delete keys from a bucket"
+    print("s3rm [--verbose] [-r] bucket [key...]", file=sys.stderr)
+    print("delete a bucket or", file=sys.stderr)
+    print("delete keys from a bucket", file=sys.stderr)
     return 1
 
 def main():
@@ -31,39 +31,40 @@ def main():
         return usage()
 
     bucketname = myargs.pop(0)
-    if verbose: print bucketname
+    if verbose: print(bucketname)
 
     s3 = boto3.resource('s3')
-    if verbose: print s3
+    if verbose: print(s3)
     bucket = s3.Bucket(bucketname)
-    if verbose: print bucket
+    if verbose: print(bucket)
 
     exitr = 0
     if len(myargs) == 0:
         if rflag:
             for obj in bucket.objects.all():
                 resp = obj.delete()
-                if verbose: print resp
+                if verbose: print(resp)
         try:
             resp = bucket.delete()
-            if verbose: print resp
+            if verbose: print(resp)
         except:
             e = sys.exc_info()
-            print >>sys.stderr, e
+            print(e, file=sys.stderr)
             traceback.print_tb(e[2])
             exitr = 1
     else:
         for keyname in myargs:
-            if verbose: print "remove key", keyname
+            if verbose: print("remove key", keyname)
             deleted = 0
             for obj in bucket.objects.filter(Prefix=keyname):
                 resp = obj.delete()
-                if verbose: print resp
+                if verbose: print(resp)
                 deleted += 1
             if deleted == 0:
-                print >>sys.stderr, 'could not rm', keyname
+                print('could not rm', keyname, file=sys.stderr)
                 exitr = 1
 
     return exitr
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())

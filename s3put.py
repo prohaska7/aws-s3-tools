@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -8,9 +8,9 @@ import traceback
 import logging
 
 def usage():
-    print >>sys.stderr, "s3put bucket key [localinputfile]"
-    print >>sys.stderr, "put an object in an S3 bucket with a given key and content from a localinputfile or stdin"
-    print >>sys.stderr, "[--verbose]"
+    print("s3put bucket key [localinputfile]", file=sys.stderr)
+    print("put an object in an S3 bucket with a given key and content from a localinputfile or stdin", file=sys.stderr)
+    print("[--verbose]", file=sys.stderr)
     return 1
 
 def main():
@@ -31,7 +31,7 @@ def main():
         return usage()
     try:
         s3 = boto3.resource('s3')
-        if verbose: print s3
+        if verbose: print(s3)
 
         bucketname = myargs[0]
         keyname = myargs[1]
@@ -43,7 +43,7 @@ def main():
             pass
 
         obj = s3.Object(bucketname, keyname)
-        if verbose: print obj
+        if verbose: print(obj)
 
         if len(myargs) >= 3:
             localfile = myargs[2]
@@ -61,7 +61,7 @@ def main():
             obj.upload_fileobj(sys.stdin)
     except:
         e = sys.exc_info()
-        print >>sys.stderr, e
+        print(e, file=sys.stderr)
         traceback.print_tb(e[2])
         return 1
     

@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -9,8 +9,8 @@ import traceback
 import logging
 
 def usage():
-    print >>sys.stderr, "s3get bucket key [localoutputfile]"
-    print >>sys.stderr, "get an S3 object from an S3 bucket with a given key into a localoutputfile or stdout"
+    print("s3get bucket key [localoutputfile]", file=sys.stderr)
+    print("get an S3 object from an S3 bucket with a given key into a localoutputfile or stdout", file=sys.stderr)
     return 1
 
 def main():
@@ -36,7 +36,7 @@ def main():
     newfile = None
     try:
         s3 = boto3.resource('s3')
-        if verbose: print s3        
+        if verbose: print(s3)
 
         bucketname = myargs[0]
         keyname = myargs[1]
@@ -48,7 +48,7 @@ def main():
             pass
 
         obj = s3.Object(bucketname, keyname)
-        if verbose: print obj
+        if verbose: print(obj)
 
         if len(myargs) >= 3:
             # get the object and store into a local file
@@ -58,7 +58,7 @@ def main():
 
             # verify size
             st = os.stat(newfile)
-            if verbose: print 'check size', newfile, st.st_size, obj.content_length
+            if verbose: print('check size', newfile, st.st_size, obj.content_length)
             if st.st_size != obj.content_length:
                 raise ValueError('size')
 
@@ -66,17 +66,17 @@ def main():
             local_md5 = compute_md5(newfile)
             
             # verify md5
-            md5 = string.strip(obj.e_tag, '"')
-            if verbose: print local_md5, md5
+            md5 = obj.e_tag.strip('"')
+            if verbose: print(local_md5, md5)
             if local_md5 != md5:
-                if not obj.metadata.has_key('user-md5'):
+                if not 'use-md5' in obj.metadata:
                     if not ignore_md5:
                         e = 'user-md5 metadata missing local_md5=%s etag=%s' % (local_md5, md5)
                         raise ValueError(e)
 
-            if obj.metadata.has_key('user-md5'):
+            if 'user-md5' in obj.metadata:
                 user_md5 = obj.metadata['user-md5']
-                if verbose: print local_md5, user_md5
+                if verbose: print(local_md5, user_md5)
                 if local_md5 != user_md5:
                     if not ignore_md5:
                         e = 'user md5 different local_md5=%s user_md5=%s' % (local_md5, user_md5)
@@ -85,14 +85,14 @@ def main():
             obj.download_fileobj(sys.stdout)
     except:
         e = sys.exc_info()
-        print >>sys.stderr, e
+        print(e, file=sys.stderr)
         traceback.print_tb(e[2])
         if newfile is not None:
-            print >>sys.stderr, "unlink", newfile
+            print("unlink", newfile, file=sys.stderr)
             try:
                 os.unlink(newfile)
             except:
-                print >>sys.stderr, sys.exc_info()
+                print(sys.exc_info(), file=sys.stderr)
         return 1
     
     return 0

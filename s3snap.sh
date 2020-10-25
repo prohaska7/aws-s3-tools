@@ -15,6 +15,6 @@ aws s3 cp --recursive $*
 # any user md5 checksum that is stored in the metadata.  second, it may change the
 # e_tag attribute, which sometimes equals the md5 checksum over the data.
 # the s3snap-fixup utility fixes these two cases
-s3snap-fixup --size 10000000 $*
+s3snap-fixup --size=10000000 $*
 
 

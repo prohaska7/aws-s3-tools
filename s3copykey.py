@@ -1,11 +1,12 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
-import boto.s3.connection
+import traceback
+import boto3
 
 def usage():
-    print >>sys.stderr, "s3copykey [destbucket] [destkey] [srcbucket] [srckey]"
-    print >>sys.stderr, "copy a key from one bucket to another bucket"
+    print("s3copykey [--verbose] destbucket destkey srcbucket srckey", file=sys.stderr)
+    print("copy a key from one bucket to another bucket", file=sys.stderr)
     return 1
 
 def main():
@@ -23,20 +24,20 @@ def main():
     if len(myargs) != 4:
         return usage()
 
+    dest = { 'Bucket': myargs[0], 'Key': myargs[1] }
+    src = { 'Bucket': myargs[2], 'Key': myargs[3] }
     try:
-        s3 = boto.s3.connection.S3Connection()
+        s3 = boto3.resource('s3')
         if verbose:
-            print s3
-        destbucket = s3.get_bucket(myargs[0])
-        if verbose:
-            print destbucket
-        r = destbucket.copy_key(myargs[1], myargs[2], myargs[3])
-        if verbose:
-            print r
+            print(s3)
+        s3.meta.client.copy(src, dest['Bucket'], dest['Key'])
     except:
-        print >>sys.stderr, sys.exc_info()
+        e = sys.exc_info()
+        print(e, 'dest=', dest, 'src=', src, file=sys.stderr)
+        traceback.print_tb(e[2])
         return 1;
 
     return 0
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())

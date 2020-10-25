@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
 import re
@@ -7,14 +7,14 @@ import boto3
 import traceback
 
 def usage():
-    print >>sys.stderr, "s3ls"
-    print >>sys.stderr, "list the s3 buckets"
-    print >>sys.stderr, "s3ls [--long] [--prefix=prefix] buckets..."
-    print >>sys.stderr, "list the objects in an s3 bucket with a given prefix"
+    print("s3ls", file=sys.stderr)
+    print("list the s3 buckets", file=sys.stderr)
+    print("s3ls [--long] [--prefix=prefix] buckets...", file=sys.stderr)
+    print("list the objects in an s3 bucket with a given prefix", file=sys.stderr)
     return 1
 
 def main():
-    dolong = 0
+    dolong = False
     prefix= ''
 
     buckets = []
@@ -22,7 +22,7 @@ def main():
         if arg == "-h" or arg == "-?" or arg == "--help":
             return usage()
         if arg == "-l" or arg == "--long":
-            dolong = 1
+            dolong = True
             continue
         match = re.match("--prefix=(.*)", arg)
         if match:
@@ -32,20 +32,19 @@ def main():
 
     try:
         s3 = boto3.resource('s3')
-        if 0: print s3, dir(s3)
         if len(buckets) == 0:
             for bucket in s3.buckets.all():
                 if dolong:
-                    print bucket.creation_date, bucket.name
+                    print(bucket.creation_date, bucket.name)
                 else:
-                    print bucket.name
+                    print(bucket.name)
         else:
             for bucketname in buckets:
                 bucket = s3.Bucket(bucketname)
                 ls_bucket(bucket, prefix, dolong)
     except:
         e = sys.exc_info()
-        print >>sys.stderr, e
+        print(e, file=sys.stderr)
         traceback.print_tb(e[2])
         return 1
 
@@ -53,19 +52,23 @@ def main():
 
 def ls_bucket(bucket, prefix, dolong):
     for k in bucket.objects.filter(Prefix=prefix):
-        if 0: print k, dir(k)
         if dolong:
             o = bucket.Object(k.key)
-            if 0: print o, dir(o)
-            md5 = string.strip(o.e_tag, '"')
-            if o.metadata.has_key('user-md5'):
+            md5 = o.e_tag.strip('"')
+            if 'user-md5' in o.metadata:
                 user_md5 = o.metadata['user-md5']
                 if md5 != user_md5:
-                    print o.key.encode('utf-8'), 'e_tag=', md5, 'user_md5=', user_md5
+                    print(o.key.encode('utf-8'), 'e_tag=', md5, 'user_md5=', user_md5)
                 md5 = user_md5 + '*'
-            print "%s %12d %s %s" % (o.last_modified, int(o.content_length), md5, o.key.encode('utf-8'))
+            print("%s %12d %s %s" % (o.last_modified, int(o.content_length), md5, key_str(o.key)))
         else:
-            print k.key.encode('utf-8')
+            print(key_str(k.key))
+
+def key_str(k):
+    try:
+        return str(k, encoding='utf-8')
+    except:
+        return k
 
 if __name__ == '__main__':
     sys.exit(main())

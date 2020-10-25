@@ -1,13 +1,12 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
 import re
-import boto.s3.connection
-import boto.s3.key
+import boto3
 
 def usage():
-    print >>sys.stderr, "s3url [--expires=seconds] bucket key"
-    print >>sys.stderr, "generate the url for an s3 object"
+    print("s3url [--expires=seconds] bucket key", file=sys.stderr)
+    print("generate the url for an s3 object", file=sys.stderr)
     return 1
 
 def main():
@@ -30,18 +29,14 @@ def main():
     if len(myargs) != 2:
         return usage()
 
-    s3 = boto.s3.connection.S3Connection()
+    c = boto3.client('s3')
     if verbose:
-        print s3
+        print(c)
 
-    b = s3.get_bucket(myargs[0])
-    if verbose:
-        print b
-
-    k = boto.s3.key.Key(b)
-    k.key = myargs[1]
-    print k.generate_url(expires)
+    r = c.generate_presigned_post(myargs[0], myargs[1], ExpiresIn=expires)
+    print(r)
     
     return 0
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())

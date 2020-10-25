@@ -1,12 +1,12 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 def usage():
-    print >>sys.stderr, "s3mkbucket [--verbose] bucket..."
-    print >>sys.stderr, "make s3 buckets"
+    print("s3mkbucket [--verbose] bucket...", file=sys.stderr)
+    print("make s3 buckets", file=sys.stderr)
     return 1;
 
 import sys
-import boto.s3.connection
+import boto3
 
 def main():
     verbose = 0
@@ -22,16 +22,17 @@ def main():
 
     r = 0
     try:
-        s3 = boto.s3.connection.S3Connection()
-        if verbose: print s3
+        s3 = boto3.resource('s3')
+        if verbose: print(s3)
 
         for bucketname in myargs:
-            b = s3.create_bucket(bucketname)
-            if verbose: print b
+            b = s3.create_bucket(ACL='private', Bucket=bucketname)
+            if verbose: print(b)
     except:
-        print >>sys.stderr, sys.exc_info()
+        print(sys.exc_info(), file=sys.stderr)
         r = 1
 
     return r
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())

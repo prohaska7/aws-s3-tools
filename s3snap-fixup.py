@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # the aws cli cp utility sometimes does not copy the metadata from the source
 # object to the destination object. since the metadata includes the user-md5
@@ -25,8 +25,10 @@ import os
 import hashlib
 import tempfile
 
+verbose = 0
+
 def usage():
-    print '[--help] [--verbose] [--prefix=the_prefix] [--size=the_size_limit] src_bucket dest_bucket'
+    print('[--help] [--verbose] [--prefix=the_prefix] [--size=the_size_limit] src_bucket dest_bucket', file=sys.stderr)
 
 def main():
     prefix = ''
@@ -51,6 +53,7 @@ def main():
         buckets.append(arg)
 
     if len(buckets) != 2:
+        print(len(buckets))
         usage()
         return 1
 
@@ -60,7 +63,7 @@ def main():
         fixup_bucket(s3, s3client, buckets[0], buckets[1], prefix, size_limit)
     except:
         e = sys.exc_info()
-        print >>sys.stderr, e
+        print(e, file=sys.stderr)
         traceback.print_tb(e[2])
         return 1
 
@@ -73,61 +76,63 @@ def fixup_bucket(s3, s3client, src_bucketname, dest_bucketname, prefix, size_lim
         fixup_object(s3client, k, src_bucketname, src_bucket, dest_bucketname, dest_bucket, size_limit)
 
 def fixup_object(s3client, k, src_bucketname, src_bucket, dest_bucketname, dest_bucket, size_limit):
+    if verbose: print('fixup_object', k.key)
     o = dest_bucket.Object(k.key)
-    if not 'user-md5' in o.metadata:
-        if 0: print 'user-md5 missing in', dest_bucketname, k.key
-        srco = src_bucket.Object(k.key)
-        if not 'user-md5' in srco.metadata:
-            if 0: print '+ user-md5 missing in', src_bucketname, k.key
-            print 'skipping', k.key, o.content_length
+    if 'user-md5' in o.metadata:
+        return
+    if 1: print('user-md5 missing in', dest_bucketname, k.key)
+    srco = src_bucket.Object(k.key)
+    if not 'user-md5' in srco.metadata:
+        if 1: print('+ user-md5 missing in', src_bucketname, k.key)
 
-            if size_limit is not None and o.content_length > size_limit:
-                return
+        if size_limit is not None and o.content_length > size_limit:
+            print('skipping', k.key, o.content_length)
+            return
             
-            # diff src and dest objects
-            srcf, srcfile = tempfile.mkstemp()
-            os.close(srcf)
-            srco.download_file(srcfile)
+        # diff src and dest objects
+        srcf, srcfile = tempfile.mkstemp()
+        os.close(srcf)
+        srco.download_file(srcfile)
 
-            destf, destfile = tempfile.mkstemp()
-            os.close(destf)
-            o.download_file(destfile)
+        destf, destfile = tempfile.mkstemp()
+        os.close(destf)
+        o.download_file(destfile)
 
-            if not file_cmp(srcfile, destfile):
-                print k.key, 'file cmp failed'
-                return
+        if not file_cmp(srcfile, destfile):
+            print(k.key, 'file cmp failed', srcfile, destfile)
+            return
 
-            # compute md5 checksums
-            src_md5 = compute_md5(srcfile)
-            dest_md5 = compute_md5(destfile)
-            if src_md5 != dest_md5:
-                print k.key, 'src md5=', src_md5, 'dest md5=', dest_md5
-                return
+        # compute md5 checksums
+        src_md5 = compute_md5(srcfile)
+        dest_md5 = compute_md5(destfile)
+        if src_md5 != dest_md5:
+            print(k.key, srcfile, 'src md5=', src_md5, destfile, 'dest md5=', dest_md5)
+            return
 
-            os.unlink(srcfile)
-            os.unlink(destfile)
+        os.unlink(srcfile)
+        os.unlink(destfile)
             
-            # compare with e_tag
-            src_tag = string.strip(srco.e_tag, '"')
-            dest_tag = string.strip(o.e_tag, '"')
-            if src_md5 != src_tag:
-                print k.key, 'src etag=', src_tag, 'dest etag=', dest_tag
-                return
+        # compare with e_tag
+        src_tag = srco.e_tag.strip('"')
+        dest_tag = o.e_tag.strip('"')
+        if src_md5 != src_tag:
+            print(k.key, 'src etag=', src_tag, 'dest etag=', dest_tag)
+            return
             
-            # update dest object metadata with checksum
-            print 'fixing', k.key, 'user-md5=', dest_md5
-            new_metadata = srco.metadata.copy()
-            new_metadata.update(o.metadata)
-            new_metadata['user-md5'] = dest_md5
-            s3client.copy_object(Bucket=dest_bucketname, Key=k.key, CopySource=dest_bucketname + '/' + k.key, Metadata=new_metadata, MetadataDirective='REPLACE')
-        else:
-            print 'fixing', k.key, 'src-md5=', srco.metadata['user-md5']
-            new_metadata = srco.metadata.copy()
-            new_metadata.update(o.metadata)
-            s3client.copy_object(Bucket=dest_bucketname, Key=k.key, CopySource=dest_bucketname + '/' + k.key, Metadata=new_metadata, MetadataDirective='REPLACE')
+        # update dest object metadata with checksum
+        print('fixing', k.key, 'user-md5=', dest_md5)
+        new_metadata = srco.metadata.copy()
+        new_metadata.update(o.metadata)
+        new_metadata['user-md5'] = dest_md5
+        s3client.copy_object(Bucket=dest_bucketname, Key=k.key, CopySource=dest_bucketname + '/' + k.key, Metadata=new_metadata, MetadataDirective='REPLACE')
+    else:
+        print('fixing', k.key, 'src-md5=', srco.metadata['user-md5'])
+        new_metadata = srco.metadata.copy()
+        new_metadata.update(o.metadata)
+        s3client.copy_object(Bucket=dest_bucketname, Key=k.key, CopySource=dest_bucketname + '/' + k.key, Metadata=new_metadata, MetadataDirective='REPLACE')
 
 def file_cmp(afile, bfile):
-    if 1: print 'real_file_cmp', afile, bfile
+    if verbose: print('real_file_cmp', afile, bfile)
     r = 1
     with open(afile, 'rb') as af, open(bfile, 'rb') as bf:
         n = 1024*1024
@@ -151,4 +156,5 @@ def compute_md5(file):
             b = f.read(n)
     return md5.hexdigest()
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())
