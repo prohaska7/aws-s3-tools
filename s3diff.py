@@ -85,17 +85,30 @@ def diff(a_label, a_objs, b_label, b_objs, metaonly):
             ai += 1
             bi += 1
         elif astr < bstr:
-            print(b_label, 'missing', astr)
+            print(b_label, 'missing', convert_printable_fname(astr))
             ai += 1
         else:
             print(a_label, 'missing', bstr)
             bi += 1
     while ai < len(a):
-        print(b_label, 'missing', a[ai])
+        print(b_label, 'missing', convert_printable_fname(a[ai]))
         ai += 1
     while bi < len(b):
         print(a_label, 'missing', b[bi])
         bi += 1
+def convert_printable_fname(s):
+    try:
+        s.encode()
+        return s
+    except:
+        t = ''
+        for c in s:
+            try:
+                c.encode()
+                t += c
+            except:
+                t += '\\x%x' % (ord(c))
+        return t
 def file_cmp(amd, bmd):
     afile = amd.name
     bfile = bmd.name
@@ -163,7 +176,6 @@ def get_local_files(dname):
                 fname = path + '/' + f
             else:
                 fname = f
-            # fname = fname.decode('utf-8')
             md5 = compute_md5(fname)
             allfiles[fname] = MD(fname, os.stat(fname).st_size, None, md5, None)
             if verbose: print('compute md5', fname, allfiles[fname].__dict__)
