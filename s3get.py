@@ -81,6 +81,8 @@ def main():
                     if not ignore_md5:
                         e = 'user md5 different local_md5=%s user_md5=%s' % (local_md5, user_md5)
                         raise ValueError(e)
+            else:
+                print('WARN user-md5 missing', keyname)
         else:
             obj.download_fileobj(sys.stdout)
     except:
