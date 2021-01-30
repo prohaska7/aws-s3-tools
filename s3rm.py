@@ -57,9 +57,13 @@ def main():
             if verbose: print("remove key", keyname)
             deleted = 0
             for obj in bucket.objects.filter(Prefix=keyname):
-                resp = obj.delete()
-                if verbose: print(resp)
-                deleted += 1
+                if rflag or obj.key == keyname:
+                    resp = obj.delete()
+                    if verbose: print(resp)
+                    deleted += 1
+                else:
+                    print('will not rm', obj.key, file=sys.stderr)
+                    exitr = 1
             if deleted == 0:
                 print('could not rm', keyname, file=sys.stderr)
                 exitr = 1
