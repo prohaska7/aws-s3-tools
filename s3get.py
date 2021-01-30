@@ -69,7 +69,7 @@ def main():
             md5 = obj.e_tag.strip('"')
             if verbose: print(local_md5, md5)
             if local_md5 != md5:
-                if not 'use-md5' in obj.metadata:
+                if not 'user-md5' in obj.metadata:
                     if not ignore_md5:
                         e = 'user-md5 metadata missing local_md5=%s etag=%s' % (local_md5, md5)
                         raise ValueError(e)
@@ -109,4 +109,5 @@ def compute_md5(file):
             b = f.read(n)
     return md5.hexdigest()
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())

@@ -93,4 +93,5 @@ def compute_md5(file):
             b = f.read(n)
     return md5.hexdigest()
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())
