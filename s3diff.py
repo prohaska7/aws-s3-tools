@@ -38,7 +38,7 @@ def main():
 
     try:
         # get all local file names in a directory
-        if verbose: print('get local')
+        if verbose: print('get local', prefix)
         local_objs = get_local_files(prefix)
 
         # get all key names from s3
@@ -169,13 +169,18 @@ def get_s3_keys(s3, bucket, prefix):
     return s3_keys
 def get_local_files(dname):
     allfiles = {}
+    if dname == '':
+        dname = '.'
     for path,dirs,files in os.walk(dname):
+        if verbose: print('get_local_files', path, dirs, files)
         files.sort()
         for f in files:
-            if path != '.':
-                fname = path + '/' + f
-            else:
+            if path == '.':
                 fname = f
+            else:
+                fname = path + '/' + f
+            if fname[:2] == './':
+                fname = fname[2:]
             md5 = compute_md5(fname)
             allfiles[fname] = MD(fname, os.stat(fname).st_size, None, md5, None)
             if verbose: print('compute md5', fname, allfiles[fname].__dict__)
