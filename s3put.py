@@ -12,6 +12,7 @@ def usage():
     print("put an object in an S3 bucket with a given key and content from a localinputfile or stdin", file=sys.stderr)
     print("s3put [--recursive|-r] [--verbose|-v] bucket directory", file=sys.stderr)
     print("recursive put all files into an S3 bucket", file=sys.stderr)
+    print("null directory matches current directory", file=sys.stderr)
     return 1
 
 def main():
@@ -25,13 +26,17 @@ def main():
         if arg == "-h" or arg == "-?" or arg == "--help":
             return usage()
         if arg == "-v" or arg == "--verbose":
-            verbose = True; continue
+            verbose = True
+            continue
         if arg == "-r" or arg == "--recursive":
-            recursive = True; continue
+            recursive = True
+            continue
         if arg == "-d":
-            debug = True; continue
+            debug = True
+            continue
         if arg == "-i":
-            ignore = True; continue
+            ignore = True
+            continue
         myargs.append(arg)
 
     if debug:
@@ -57,9 +62,13 @@ def main():
     return 0
 
 def put_dir(s3, bucketname, dirname, verbose, ignore):
+    if dirname == '':
+        dirname = '.'
     for path,dirs,files in os.walk(dirname):
         for fname in files:
             pathfile = path + '/' + fname
+            if pathfile[:2] == './':
+                pathfile = pathfile[2:]
             put_object(s3, bucketname, pathfile, pathfile, verbose, ignore)
 
 def put_object(s3, bucketname, keyname, localfile, verbose, ignore):
