@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
 set -e
-verbose=0
+putargs="-r"
 while [ $# -gt 0 ] ; do
-    if [ "$1" = "--verbose" ] ; then verbose=1; shift; else break; fi
+    if [ "$1" = "--verbose" ] ; then putargs="$putargs $1"; shift; else break; fi
 done
 if [ $# != 2 ] ; then exit 1; fi
-bucket=$1
-find -L "$2" -type f | \
-while read f; do
-    if [ -f "$f" ] ; then
-        if [ $verbose -ne 0 ] ; then echo s3put $bucket "$f" "$f"; fi
-	s3put $bucket "$f" "$f"
-    fi
-done
+s3put $putargs "$1" "$2"
