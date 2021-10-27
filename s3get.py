@@ -77,6 +77,7 @@ def main():
     return 0
 
 def get(bucket, keyname, newfile, verbose):
+    newfile_created = False
     try:
         # convert keyname to unicode
         try:
@@ -93,6 +94,7 @@ def get(bucket, keyname, newfile, verbose):
         
         # get the object and store into a local file
         with open(newfile, 'wb') as f:
+            newfile_created = True
             obj.download_fileobj(f)
 
         # verify size
@@ -126,7 +128,7 @@ def get(bucket, keyname, newfile, verbose):
         e = sys.exc_info()
         print(e, file=sys.stderr)
         traceback.print_tb(e[2])
-        if newfile is not None:
+        if newfile_created:
             print("unlink", newfile, file=sys.stderr)
             try:
                 os.unlink(newfile)
