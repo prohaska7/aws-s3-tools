@@ -55,7 +55,7 @@ def main():
             if verbose: print(bucket)
 
             for k in bucket.objects.filter(Prefix=keyprefix):
-                get(bucket, k.key, k.key, verbose)
+                get(bucket, k.key, k.key, verbose, ignore_md5)
         else:
             if len(myargs) != 3:
                 return usage()
@@ -67,7 +67,7 @@ def main():
             bucket = s3.Bucket(bucketname)
             if verbose: print(bucket)
 
-            get(bucket, keyname, newfile, verbose)
+            get(bucket, keyname, newfile, verbose, ignore_md5)
     except:
         e = sys.exc_info()
         print(e, file=sys.stderr)
@@ -76,7 +76,7 @@ def main():
     
     return 0
 
-def get(bucket, keyname, newfile, verbose):
+def get(bucket, keyname, newfile, verbose, ignore_md5):
     newfile_created = False
     try:
         # convert keyname to unicode
