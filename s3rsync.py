@@ -10,7 +10,7 @@ def help():
     print('[-v|--verbose] (print debug info', file=sys.stderr)
     print('[-n|--dryrun]  (find differences but do not execute copy or remove ops', file=sys.stderr)
     print('[--delete]     (delete files in DEST that are not in SRC', file=sys.stderr)
-    print('SRCNAME DESTNAME (s3://BUCKET/KEY-PREFIX name or LOCAL-FOLDER name)', file=sys.stderr)
+    print('SRCNAME DESTNAME (s3://BUCKET/KEY-PREFIX or LOCAL-FOLDER name)', file=sys.stderr)
     return 1
 
 class LocalRepo:
@@ -133,8 +133,11 @@ class S3Repo:
         client.copy_object(Bucket=dest.bucket_name, Key=dkey,
                            CopySource={'Bucket': self.bucket_name, 'Key': skey})
     def remove_key(self, key):
-        obj = self.bucket.Object(key)
-        obj.delete()
+        fkey = self.get_full_key(key)
+        obj = self.bucket.Object(fkey)
+        resp = obj.delete()
+        global verbose
+        if verbose: print(resp)
 
 dryrun = False
 delete_flag = False
