@@ -129,9 +129,15 @@ class S3Repo:
         smd5 = obj.metadata['user-md5']
         assert smd5 == dmd5
     def copy_data(self, skey, sname, dest, dkey, dname):
-        client = boto3.client('s3')
-        client.copy_object(Bucket=dest.bucket_name, Key=dkey,
-                           CopySource={'Bucket': self.bucket_name, 'Key': skey})
+        global use_resource_copy
+        if use_resource_copy:
+            copysource = { 'Bucket': self.bucket_name, 'Key': skey }
+            dest.bucket.copy(CopySource=copysource, Key=dkey)
+        else:
+            client = boto3.client('s3')
+            client.copy_object(Bucket=dest.bucket_name, Key=dkey,
+                               CopySource={'Bucket': self.bucket_name, 'Key': skey})
+
     def remove_key(self, key):
         fkey = self.get_full_key(key)
         obj = self.bucket.Object(fkey)
@@ -142,9 +148,10 @@ class S3Repo:
 dryrun = False
 delete_flag = False
 verbose = False
+use_resource_copy = False
 
 def main():
-    global dryrun, delete_flag, verbose
+    global dryrun, delete_flag, verbose, use_resource_copy
     args = []
     for arg in sys.argv[1:]:
         if arg == '-v' or arg == '--verbose':
@@ -153,6 +160,8 @@ def main():
             dryrun = True
         if arg == '--delete':
             delete_flag = True
+        if arg == '--use-resource-copy':
+            use_resource_copy = True
         if arg == '-h' or arg == '--help':
             return help()
         if not arg.startswith('-'):
