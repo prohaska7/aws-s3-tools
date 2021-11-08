@@ -39,7 +39,7 @@ The makefile installs the tools in the user's bin directory ($HOME/bin).
     $ s3ls -l BUCKET
 
 ## List the keys with a given PREFIX
-   $ s3ls --prefix=PREFIX BUCKET
+    $ s3ls --prefix=PREFIX BUCKET
 
 ### List the newest keys
     $ s3ls -l BUCKET | sort | tail
