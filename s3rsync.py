@@ -4,6 +4,7 @@ import sys
 import os
 import hashlib
 import boto3
+import tempfile
 
 def help():
     print('[-v|--verbose] [-n|--dryrun] [--delete] SRCNAME DESTNAME', file=sys.stderr)
@@ -65,6 +66,8 @@ class LocalRepo:
     def remove_key(self, key):
         fname = self.get_full_name(key)
         os.remove(fname)
+    def get_temp_file(self, key):
+        return self.get_full_name(key)
 
 class S3Repo:
     def __init__(self, bucket_name, prefix):
@@ -72,6 +75,11 @@ class S3Repo:
         self.prefix = prefix
         self.s3 = boto3.resource('s3')
         self.bucket = self.s3.Bucket(bucket_name)
+        self.tempname = None
+    def __del__(self):
+        if self.tempname is not None:
+            os.unlink(self.tempname)
+            self.tempname = None
     def __str__(self):
         s3name = 's3://' + self.bucket_name
         if self.prefix != '':
@@ -145,13 +153,26 @@ class S3Repo:
         global verbose
         if verbose: print(resp)
 
+    def get_temp_file(self, key):
+        fkey = self.get_full_key(key)
+        if self.tempname is not None:
+            os.unlink(self.tempname)
+            self.tempname = None
+        tempf, self.tempname = tempfile.mkstemp()
+        os.close(tempf)
+        global verbose
+        if verbose: print('download', self.get_full_name(key), self.tempname)
+        self.download_data(fkey, self.tempname)
+        return self.tempname
+
 dryrun = False
 delete_flag = False
 verbose = False
 use_resource_copy = False
+do_file_cmp = False
 
 def main():
-    global dryrun, delete_flag, verbose, use_resource_copy
+    global dryrun, delete_flag, verbose, use_resource_copy, do_file_cmp
     args = []
     for arg in sys.argv[1:]:
         if arg == '-v' or arg == '--verbose':
@@ -162,6 +183,8 @@ def main():
             delete_flag = True
         if arg == '--use-resource-copy':
             use_resource_copy = True
+        if arg == '--file-cmp':
+            do_file_cmp = True
         if arg == '-h' or arg == '--help':
             return help()
         if not arg.startswith('-'):
@@ -185,7 +208,7 @@ def get_repo(name):
         return LocalRepo(name)
 
 def diff(src, dest):
-    global verbose
+    global verbose, do_file_cmp
     
     src_keys = sorted(src.get_keys())
     # print('src_keys=', src_keys)
@@ -210,6 +233,10 @@ def diff(src, dest):
                 if smd5 != dmd5:
                     if verbose: print('diff md5', pr(src.get_full_name(skey)), smd5, pr(dest.get_full_name(dkey)), dmd5)
                     copy_key(src, skey, dest, dkey)
+                elif do_file_cmp:
+                    if not file_cmp(src, skey, dest, dkey):
+                        if verbose: print('diff cmp', pr(src.get_full_name(skey)), pr(dest.get_full_name(dkey)))
+                        copy_key(src, skey, dest, dkey)
             si += 1
             di += 1
         elif skey < dkey:
@@ -269,6 +296,8 @@ def pr(s):
         return t
 
 def compute_md5(fname):
+    global verbose
+    if verbose: print('compute md5', fname)
     md5 = hashlib.md5()
     with open(fname, 'rb') as f:
         n = 1024*1024
@@ -278,5 +307,24 @@ def compute_md5(fname):
             b = f.read(n)
     return md5.hexdigest()
 
+def file_cmp(src, skey, dest, dkey):
+    sfile = src.get_temp_file(skey)
+    dfile = dest.get_temp_file(dkey)
+    global verbose
+    if verbose: print('file cmp', sfile, dfile)
+    r = False
+    with open(sfile, 'rb') as sf, open(dfile, 'rb') as df:
+        n = 1024*1024
+        while True:
+            sb = sf.read(n)
+            db = df.read(n)
+            if sb != db:
+                r = False
+                break
+            if not sb:
+                r = True
+                break
+    return r
+                                          
 if __name__ == '__main__':
     sys.exit(main())
