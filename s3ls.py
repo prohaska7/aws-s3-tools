@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import re
 import string
 import boto3
 import traceback
@@ -9,39 +8,43 @@ import traceback
 def usage():
     print("s3ls", file=sys.stderr)
     print("list the s3 buckets", file=sys.stderr)
-    print("s3ls [--long] [--prefix=prefix] buckets...", file=sys.stderr)
+    print("s3ls [--long] buckets...", file=sys.stderr)
     print("list the objects in an s3 bucket with a given prefix", file=sys.stderr)
     return 1
 
-def main():
-    dolong = False
-    prefix= ''
+dolong = False
+verbose = False
 
-    buckets = []
+def main():
+    global dolong, verbose
+    args = []
     for arg in sys.argv[1:]:
         if arg == "-h" or arg == "-?" or arg == "--help":
             return usage()
         if arg == "-l" or arg == "--long":
             dolong = True
             continue
-        match = re.match("--prefix=(.*)", arg)
-        if match:
-            prefix = match.group(1)
+        if arg == '--verbose':
+            verbose = True
             continue
-        buckets.append(arg)
+        args.append(arg)
 
     try:
         s3 = boto3.resource('s3')
-        if len(buckets) == 0:
+        if len(args) == 0:
             for bucket in s3.buckets.all():
                 if dolong:
                     print(bucket.creation_date, bucket.name)
                 else:
                     print(bucket.name)
         else:
-            for bucketname in buckets:
+            for path in args:
+                bucketname, keyprefix = s3uri(path)
+                if bucketname == '':
+                    print('unknown bucketname in', path, file=sys.stderr)
+                    return 1
                 bucket = s3.Bucket(bucketname)
-                ls_bucket(bucket, prefix, dolong)
+                ls_bucket(bucket, keyprefix)
     except:
         e = sys.exc_info()
         print(e, file=sys.stderr)
@@ -50,7 +53,17 @@ def main():
 
     return 0
 
-def ls_bucket(bucket, prefix, dolong):
+def s3uri(uri):
+    ''' returns (bucketname, keyprefix) '''
+    if uri.startswith('s3://'):
+        uri = uri[5:]
+        f = uri.split('/')
+        return (f.pop(0), '/'.join(f))
+    else:
+        return (uri, '')
+
+def ls_bucket(bucket, prefix):
+    global dolong
     for k in bucket.objects.filter(Prefix=prefix):
         if dolong:
             o = bucket.Object(k.key)
