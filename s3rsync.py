@@ -7,11 +7,11 @@ import boto3
 import tempfile
 
 def help():
-    print('[-v|--verbose] [-n|--dryrun] [--delete] SRCNAME DESTNAME', file=sys.stderr)
-    print('[-v|--verbose] (print debug info', file=sys.stderr)
-    print('[-n|--dryrun]  (find differences but do not execute copy or remove ops', file=sys.stderr)
-    print('[--delete]     (delete files in DEST that are not in SRC', file=sys.stderr)
-    print('SRCNAME DESTNAME (s3://BUCKET/KEY-PREFIX or LOCAL-FOLDER name)', file=sys.stderr)
+    print('[-v|--verbose] [-n|--dryrun] [--delete] SRC DEST', file=sys.stderr)
+    print('[-v|--verbose] (print debug info)', file=sys.stderr)
+    print('[-n|--dryrun]  (find differences but do not execute copy or remove operations)', file=sys.stderr)
+    print('[--delete]     (delete objects in DEST that are not in SRC)', file=sys.stderr)
+    print('SRC DEST       (s3://BUCKET/KEY-PREFIX or local path)', file=sys.stderr)
     return 1
 
 class LocalRepo:
@@ -89,7 +89,10 @@ class S3Repo:
         return 'S'
     def get_keys(self):
         keys = []
-        for k in self.bucket.objects.filter(Prefix=self.prefix):
+        filter_prefix = self.prefix
+        if filter_prefix !=  '':
+            filter_prefix += '/'
+        for k in self.bucket.objects.filter(Prefix=filter_prefix):
             key = k.key
             if self.prefix != '' and key.startswith(self.prefix + '/'):
                 key = key[len(self.prefix)+1:]
@@ -211,9 +214,9 @@ def diff(src, dest):
     global verbose, do_file_cmp
     
     src_keys = sorted(src.get_keys())
-    # print('src_keys=', src_keys)
+    if False:  print('src_keys=', src_keys)
     dest_keys = sorted(dest.get_keys())
-    # print('dest_keys=', dest_keys)
+    if False: print('dest_keys=', dest_keys)
 
     si = di = 0
     while si < len(src_keys) and di < len(dest_keys):
@@ -249,12 +252,12 @@ def diff(src, dest):
             di += 1
     while si < len(src_keys):
         skey = src_keys[si]
-        if verbose: print('E dest missing', pr(dest.get_full_name(skey)))
+        if verbose: print('E dest missing', pr(skey))
         copy_key(src, skey, dest, skey)
         si += 1
     while di < len(dest_keys):
         dkey = dest_keys[di]
-        if verbose: print('E src missing', pr(src.get_full_name(dkey)))
+        if verbose: print('E src missing', pr(dkey))
         remove_key(dest, dkey)
         di += 1
 
