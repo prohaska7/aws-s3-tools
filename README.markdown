@@ -36,17 +36,19 @@ The makefile installs the tools in the user's bin directory ($HOME/bin).
     $ aws s3 mb s3://BUCKET
 
 ### List the keys in an S3 bucket
-    $ s3ls -l BUCKET
+    $ s3ls -l s3://BUCKET
+
+Includes the creation date and time of the object, the object size, the MD5 checksum on the data, and the key name.
 
 ## List the keys with a given PREFIX
-    $ s3ls --prefix=PREFIX BUCKET
+    $ s3ls s3://BUCKET/KEY-PREFIX
 
 ### List the newest keys
-    $ s3ls -l BUCKET | sort | tail
+    $ s3ls -l s3://BUCKET | sort | tail
 
 ### Compute the sum of the key sizes in a bucket
-    $ s3ls -l BUCKET | gawk -M '{s+=$3}END{print s};
-    $ sels -l --prefix=PREFIX BUCKET | gawk -M '{s+=$3}END{print s}'
+    $ s3ls -l s3://BUCKET | gawk -M '{s+=$3}END{print s};
+    $ sels -l s3://BUCKET/KEY-PREFIX | gawk -M '{s+=$3}END{print s}'
 
 ### Put a file into an S3 bucket
     $ s3put BUCKET KEY FILE
@@ -65,16 +67,16 @@ The makefile installs the tools in the user's bin directory ($HOME/bin).
     $ aws s3 rm s3://BUCKET/KEY
 
 ### Sync the contents of an S3 bucket with a local directory
-    $ s3rsync LOCALDIR s3://BUCKET/LOCALDIR
+    $ s3rsync LOCAL-SRC-PATH s3://BUCKET/DEST-PATH
 
 s3rsync uses the object size and the user MD5 checksum to determine
 if the objects differ.
 
 ### Sync the contents of a local directory with an S3 bucket
-    $ s3rsync s3://BUCKET/LOCALDIR LOCALDIR
+    $ s3rsync s3://BUCKET/SRC-PATH LOCAL-DEST-PATH
 
 ### Create a snapshot of an S3 bucket
-    $ aws s3 mb s3://NEWBUCKET
-    $ s3snap s3://OLDBUCKET s3://NEWBUCKET
+    $ aws s3 mb s3://NEW-BUCKET
+    $ s3snap s3://OLD-BUCKET s3://NEW-BUCKET
 
 Snapshots may be useful as a backup.
