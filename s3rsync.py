@@ -193,7 +193,8 @@ def main():
             return help()
         if not arg.startswith('-'):
             args.append(arg)
-    assert len(args) == 2
+    if len(args) != 2:
+        return help()
     src = get_repo(args[0])
     if verbose: print('src=', src)
     dest = get_repo(args[1])
