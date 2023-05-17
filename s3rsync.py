@@ -7,10 +7,10 @@ import boto3
 import tempfile
 
 def help():
-    print('[-v|--verbose] [-n|--dryrun] [--delete] [--file-cmp] SRC DEST', file=sys.stderr)
+    print('[-v|--verbose] [-n|--dryrun] [--delete|--remove] [--file-cmp] SRC DEST', file=sys.stderr)
     print('[-v|--verbose] (print debug info)', file=sys.stderr)
     print('[-n|--dryrun]  (find differences but do not execute copy or remove operations)', file=sys.stderr)
-    print('[--delete]     (delete objects in DEST that are not in SRC)', file=sys.stderr)
+    print('[--delete|--remove]     (delete objects in DEST that are not in SRC)', file=sys.stderr)
     print('[--file-cmp]   (compare source and dest files)', file=sys.stderr)
     print('SRC DEST       (s3://BUCKET/KEY-PREFIX or local path)', file=sys.stderr)
     return 1
@@ -183,7 +183,7 @@ def main():
             verbose = True
         if arg == '-n' or arg == '--dryrun' or arg == '--dry-run':
             dryrun = True
-        if arg == '--delete':
+        if arg == '--delete'or arg == '--remove':
             delete_flag = True
         if arg == '--use-resource-copy':
             use_resource_copy = True
