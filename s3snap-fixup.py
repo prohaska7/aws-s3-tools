@@ -26,9 +26,15 @@ import hashlib
 import tempfile
 
 verbose = 0
+exit_code = 0
 
 def usage():
     print('[--help] [--verbose] [--size=THE_SIZE_LIMIT] SRC DEST', file=sys.stderr)
+
+def eprint(*args):
+    print(*args, file=sys.stderr)
+    global exit_code
+    exit_code = 1
 
 class LocalRepo:
     def __init__(self, dname):
@@ -103,9 +109,9 @@ class S3Repo:
             md5 = None
         return md5
     def set_md5(self, key, md5):
-        full_key = self.get_full_key(key)
         global verbose
-        if verbose: print('set_md5', full_key, md5)
+        if verbose: print('set_md5', self.get_full_name(key), md5)
+        full_key = self.get_full_key(key)
         obj = self.bucket.Object(full_key)
         obj.metadata.update({'user-md5': md5})
         obj.copy_from(CopySource={'Bucket': self.bucket_name, 'Key': full_key}, Metadata=obj.metadata, MetadataDirective='REPLACE')
@@ -129,7 +135,6 @@ def main():
         buckets.append(get_repo(arg))
 
     if len(buckets) != 2:
-        print(len(buckets))
         usage()
         return 1
 
@@ -137,11 +142,10 @@ def main():
         fixup_bucket(buckets[0], buckets[1], size_limit)
     except:
         e = sys.exc_info()
-        print(e, file=sys.stderr)
+        eprint(e)
         traceback.print_tb(e[2])
-        return 1
 
-    return 0
+    return exit_code
 
 def get_repo(name):
     if name.startswith('s3://'):
@@ -169,20 +173,20 @@ def fixup_object(key, src, dest, size_limit):
     try:
         src_size = src.get_size(key)
     except:
-        print('ERROR cant get size', src.get_full_name(key), file=sys.stderr)
+        eprint('ERROR cant get size', src.get_full_name(key))
         return
     try:
         dest_size = dest.get_size(key)
     except:
-        print('ERROR cant get size', dest.get_full_name(key), file=sys.stderr)
+        eprint('ERROR cant get size', dest.get_full_name(key))
         return
     if src_size != dest_size:
-        print('ERROR size diff', src.get_full_name(key), src_size, dest.get_full_name(key), dest_size, file=sys.stderr)
+        eprint('ERROR size diff', src.get_full_name(key), src_size, dest.get_full_name(key), dest_size)
         return
 
     # filter large files
     if size_limit is not None and src_size > size_limit:
-        print('ERROR size', src.get_full_name(key), src_size, file=sys.stderr)
+        eprint('ERROR size', src.get_full_name(key), src_size)
         return
 
     # verify src md5 exists
@@ -192,7 +196,7 @@ def fixup_object(key, src, dest, size_limit):
         src_md5 = None
     if src_md5 is None:
         # TODO download and compare
-        print('ERROR src md5 missing', src.get_full_name(key), file=sys.stderr)
+        eprint('ERROR src md5 missing', src.get_full_name(key))
         return
 
     # set dest md5 == src md5
