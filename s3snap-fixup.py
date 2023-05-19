@@ -60,6 +60,8 @@ class LocalRepo:
             return fkey
         else:
             return os.getcwd() + '/' + fkey
+    def get_temp_file(self, key):
+        return self.get_full_name(key)
 
 class S3Repo:
     def __init__(self, bucket_name, prefix):
@@ -115,6 +117,29 @@ class S3Repo:
         obj = self.bucket.Object(full_key)
         obj.metadata.update({'user-md5': md5})
         obj.copy_from(CopySource={'Bucket': self.bucket_name, 'Key': full_key}, Metadata=obj.metadata, MetadataDirective='REPLACE')
+    def download_data(self, skey, dname):
+        obj = self.bucket.Object(skey)
+        # make dirs
+        newdir = os.path.dirname(dname)
+        if newdir != '':
+            os.makedirs(newdir, exist_ok=True)
+        # download to file
+        with open(dname, 'wb') as f:
+            obj.download_fileobj(f)
+        # verify size
+        st = os.stat(dname)
+        assert st.st_size == obj.content_length
+    def get_temp_file(self, key):
+        fkey = self.get_full_key(key)
+        if self.tempname is not None:
+            os.unlink(self.tempname)
+            self.tempname = None
+        tempf, self.tempname = tempfile.mkstemp()
+        os.close(tempf)
+        global verbose
+        if verbose: print('download', self.get_full_name(key), self.tempname)
+        self.download_data(fkey, self.tempname)
+        return self.tempname
 
 def main():
     size_limit = None
@@ -195,9 +220,25 @@ def fixup_object(key, src, dest, size_limit):
     except:
         src_md5 = None
     if src_md5 is None:
-        # TODO download and compare
-        eprint('ERROR src md5 missing', src.get_full_name(key))
-        return
+        # download and compare
+        try:
+            src_file = src.get_temp_file(key)
+        except:
+            eprint('ERROR cant get src', src.get_full_name(key))
+            return
+        try:
+            dest_file = dest.get_temp_file(key)
+        except:
+            eprint('ERROR cant get dest', dest.get_full_name(key))
+            return
+        if not file_cmp(src_file, dest_file):
+            eprint('ERROR src file != dest_file', src.get_full_name(key), dest.get_full_name(key))
+            return
+        src_md5 = compute_md5(src_file)
+        dest_md5 = compute_md5(dest_file)
+        if src_md5 != dest_md5:
+            eprint('ERROR src md5 != dest_md5', src.get_full_name(key), dest.get_full_name(key))
+            return
 
     # set dest md5 == src md5
     dest.set_md5(key, src_md5)
