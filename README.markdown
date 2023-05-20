@@ -30,13 +30,18 @@ The makefile installs the tools in the user's bin directory ($HOME/bin).
 
 ### List the S3 buckets
     $ s3ls
+    OR
+    $ aws s4 ls
 
 ### Make an S3 bucket
     $ s3mb s3://BUCKET
+    OR
     $ aws s3 mb s3://BUCKET
 
 ### List the keys in an S3 bucket
     $ s3ls -l s3://BUCKET
+    OR
+    $ aws s3 ls --recursive s3://BUCKET
 
 Includes the creation date and time of the object, the object size, the MD5 checksum on the data, and the key name.
 
@@ -48,7 +53,7 @@ Includes the creation date and time of the object, the object size, the MD5 chec
 
 ### Compute the sum of the key sizes in a bucket
     $ s3ls -l s3://BUCKET | gawk -M '{s+=$3}END{print s};
-    $ sels -l s3://BUCKET/KEY-PREFIX | gawk -M '{s+=$3}END{print s}'
+    $ s3ls -l s3://BUCKET/KEY-PREFIX | gawk -M '{s+=$3}END{print s}'
 
 ### Put a file into an S3 bucket
     $ s3put BUCKET KEY FILE
@@ -64,6 +69,7 @@ Includes the creation date and time of the object, the object size, the MD5 chec
 
 ### Delete a key from an S3 bucket
     $ s3rm s3://BUCKET/KEY
+    OR
     $ aws s3 rm s3://BUCKET/KEY
 
 ### Sync the contents of an S3 bucket with a local directory
