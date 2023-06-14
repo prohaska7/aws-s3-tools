@@ -1,11 +1,18 @@
 # The AWS S3 tools
 The AWS S3 tools are modeled on the unix directory and file abstraction.
 An S3 bucket is like a unix directory, and an S3 key is like a unix file.
-One can create and remove buckets, put files into buckets, get files from buckets, and list
-the contents of buckets.
+The basic operations are:
+create and remove a bucket,
+put files into a bucket,
+get files from a bucket,
+and list the contents of a bucket.
 
-These tools include an MD5 checksum of the data that is stored the S3 object's metadata
-(user-md5).
+An MD5 checksum of the data that comprises the S3 object is stored in the
+objects metadata (user-md5).
+
+The s3rsync command can be used to sync a local directory/s3 bucket with
+another local directory/s3 bucket, including the MD5 checksum of the
+data objects.
 
 ## Boto
 The python boto3 library is the interface to the Amazon Web Services.
@@ -31,7 +38,7 @@ The makefile installs the tools in the user's bin directory ($HOME/bin).
 ### List the S3 buckets
     $ s3ls
     OR
-    $ aws s4 ls
+    $ aws s3 ls
 
 ### Make an S3 bucket
     $ s3mb s3://BUCKET
