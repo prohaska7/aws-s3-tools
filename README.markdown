@@ -7,12 +7,18 @@ put files into a bucket,
 get files from a bucket,
 and list the contents of a bucket.
 
-An MD5 checksum of the data that comprises the S3 object is stored in the
+These tools
+store an MD5 checksum of the data that comprises the S3 object in the
 objects metadata (user-md5).
 
 The s3rsync command can be used to sync a local directory/s3 bucket with
 another local directory/s3 bucket, including the MD5 checksum of the
 data objects.
+
+The s3snap tool creates a snapshot of a source bucket in a destination
+bucket. Since the AWS S3 copy tool does not always copy the source metadata,
+including the user MD5 checksum of the data, the s3snap-fixup tool is
+needed to update the destination objects with the user MD5 checksum.
 
 ## Boto
 The python boto3 library is the interface to the Amazon Web Services.
