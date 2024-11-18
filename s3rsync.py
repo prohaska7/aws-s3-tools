@@ -26,6 +26,7 @@ class LocalRepo:
     def get_type(self):
         return 'F'
     def get_keys(self):
+        global verbose
         keys = []
         for path,dirs,files in os.walk(self.dname):
             # print('walk', path,dirs, files)
@@ -36,6 +37,7 @@ class LocalRepo:
                     fname = path + '/' + f
                 if fname.startswith(self.dname + '/'):
                     fname = fname[len(self.dname)+1:]
+                if verbose: print('local key', fname)
                 keys.append(fname)
         return keys
     def get_size(self, key):
@@ -89,6 +91,7 @@ class S3Repo:
     def get_type(self):
         return 'S'
     def get_keys(self):
+        global verbose
         keys = []
         filter_prefix = self.prefix
         if filter_prefix !=  '':
@@ -97,6 +100,7 @@ class S3Repo:
             key = k.key
             if self.prefix != '' and key.startswith(self.prefix + '/'):
                 key = key[len(self.prefix)+1:]
+            if verbose: print('s3 key', key)
             keys.append(key)
         return keys
     def get_full_key(self, key):
@@ -216,7 +220,7 @@ def diff(src, dest):
     global verbose, do_file_cmp
     
     src_keys = sorted(src.get_keys())
-    if False:  print('src_keys=', src_keys)
+    if False: print('src_keys=', src_keys)
     dest_keys = sorted(dest.get_keys())
     if False: print('dest_keys=', dest_keys)
 
@@ -224,7 +228,7 @@ def diff(src, dest):
     while si < len(src_keys) and di < len(dest_keys):
         skey = src_keys[si]
         dkey = dest_keys[di]
-        # print('cmp', skey, dkey)
+        if verbose: print('cmp', pr(src.get_full_name(skey)), pr(dest.get_full_name(dkey)))
         if skey == dkey:
             # print('check size md5', skey, dkey)
             ssize = src.get_size(skey)
